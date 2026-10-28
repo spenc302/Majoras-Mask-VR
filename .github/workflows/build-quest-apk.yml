@@ -58,6 +58,8 @@ jobs:
       - name: Configure build environment
         shell: pwsh
         run: |
+          $ErrorActionPreference = 'Stop'
+
           if (-not $env:ANDROID_HOME) {
             $env:ANDROID_HOME = $env:ANDROID_SDK_ROOT
           }
@@ -66,18 +68,23 @@ jobs:
             throw "Android SDK location was not configured."
           }
 
+          $ndk = Join-Path $env:ANDROID_HOME 'ndk\27.0.12077973'
+
+          if (-not (Test-Path $ndk)) {
+            throw "Required Android NDK was not found: $ndk"
+          }
+
           "ANDROID_HOME=$env:ANDROID_HOME" >> $env:GITHUB_ENV
           "ANDROID_SDK_ROOT=$env:ANDROID_HOME" >> $env:GITHUB_ENV
-          "ANDROID_NDK_HOME=$env:ANDROID_HOME/ndk/27.0.12077973" >> $env:GITHUB_ENV
-          "ANDROID_NDK_ROOT=$env:ANDROID_HOME/ndk/27.0.12077973" >> $env:GITHUB_ENV
-
+          "ANDROID_NDK_HOME=$ndk" >> $env:GITHUB_ENV
+          "ANDROID_NDK_ROOT=$ndk" >> $env:GITHUB_ENV
           "JAVA_HOME=$env:JAVA_HOME" >> $env:GITHUB_ENV
 
           New-Item -ItemType Directory -Force -Path `
-            "cache/tmp", `
-            "cache/vcpkg-binaries", `
-            "downloads/vcpkg", `
-            "logs" | Out-Null
+            'cache/tmp', `
+            'cache/vcpkg-binaries', `
+            'downloads/vcpkg', `
+            'logs' | Out-Null
 
           java -version
           python --version
@@ -87,26 +94,30 @@ jobs:
       - name: Set up vcpkg
         shell: pwsh
         run: |
+          $ErrorActionPreference = 'Stop'
           $root = $env:GITHUB_WORKSPACE
           $vcpkgRoot = Join-Path $root 'toolchains\vcpkg'
-          $vcpkgExe = Join-Path $vcpkgRoot 'vcpkg.exe'
 
-          if (-not (Test-Path $vcpkgExe)) {
-            if (Test-Path $vcpkgRoot) {
-              $existing = @(Get-ChildItem -LiteralPath $vcpkgRoot -Force)
-              if ($existing.Count -gt 0) {
-                throw "vcpkg directory exists but vcpkg.exe is missing."
-              }
-            } else {
-              New-Item -ItemType Directory -Force `
-                -Path (Split-Path $vcpkgRoot -Parent) | Out-Null
-            }
-
-            git clone https://github.com/microsoft/vcpkg.git $vcpkgRoot
-            if ($LASTEXITCODE -ne 0) {
-              throw "Failed to clone vcpkg."
-            }
+          # Start with a clean checkout so a stale or incomplete
+          # ports directory cannot be reused.
+          if (Test-Path $vcpkgRoot) {
+            Remove-Item -LiteralPath $vcpkgRoot -Recurse -Force
           }
+
+          New-Item -ItemType Directory -Force `
+            -Path (Split-Path $vcpkgRoot -Parent) | Out-Null
+
+          git clone https://github.com/microsoft/vcpkg.git $vcpkgRoot
+          if ($LASTEXITCODE -ne 0) {
+            throw "Failed to clone vcpkg."
+          }
+
+          $openxrPort = Join-Path $vcpkgRoot 'ports\openxr'
+          if (-not (Test-Path $openxrPort)) {
+            throw "Fresh vcpkg checkout is missing ports/openxr."
+          }
+
+          $vcpkgExe = Join-Path $vcpkgRoot 'vcpkg.exe'
 
           & (Join-Path $vcpkgRoot 'bootstrap-vcpkg.bat') -disableMetrics
           if ($LASTEXITCODE -ne 0) {
@@ -119,26 +130,41 @@ jobs:
           "VCPKG_DISABLE_METRICS=1" >> $env:GITHUB_ENV
           "VCPKG_MAX_CONCURRENCY=8" >> $env:GITHUB_ENV
 
+          & $vcpkgExe version
+          if ($LASTEXITCODE -ne 0) {
+            throw "vcpkg verification failed."
+          }
+
       - name: Install OpenXR
         shell: pwsh
         run: |
-          $vcpkg = Join-Path $env:GITHUB_WORKSPACE 'toolchains\vcpkg\vcpkg.exe'
+          $ErrorActionPreference = 'Stop'
+          $vcpkg = Join-Path $env:VCPKG_ROOT 'vcpkg.exe'
 
           & $vcpkg install openxr:x64-windows-static
           if ($LASTEXITCODE -ne 0) {
             throw "OpenXR dependency installation failed."
           }
 
+          $openxrConfig = Join-Path $env:VCPKG_ROOT `
+            'installed\x64-windows-static\share\openxr\OpenXRConfig.cmake'
+
+          if (-not (Test-Path $openxrConfig)) {
+            throw "OpenXR CMake config was not installed: $openxrConfig"
+          }
+
       - name: Skip unavailable optional test source
         shell: pwsh
         run: |
+          $ErrorActionPreference = 'Stop'
           $root = $env:GITHUB_WORKSPACE
           $cmakeFile = Join-Path $root 'src\mmvr-runtime\CMakeLists.txt'
           $testSource = Join-Path $root 'tests\periodic-report-check.cpp'
 
           if ((Test-Path $cmakeFile) -and -not (Test-Path $testSource)) {
             $lines = [System.Collections.Generic.List[string]]::new()
-            (Get-Content -LiteralPath $cmakeFile) | ForEach-Object {
+
+            Get-Content -LiteralPath $cmakeFile | ForEach-Object {
               $lines.Add($_)
             }
 
@@ -152,6 +178,7 @@ jobs:
 
             if ($start -ge 0) {
               $end = -1
+
               for ($i = $start; $i -lt $lines.Count; $i++) {
                 if ($lines[$i] -match 'periodic-report-artifacts"\)') {
                   $end = $i
@@ -165,17 +192,22 @@ jobs:
 
               $lines.RemoveRange($start, $end - $start + 1)
               Set-Content -LiteralPath $cmakeFile -Value $lines
-              Write-Host "Skipped the test whose source file is missing."
-            } else {
+
+              Write-Host "Skipped optional test with missing source."
+            }
+            else {
               Write-Host "Optional test block not present; no change required."
             }
-          } else {
+          }
+          else {
             Write-Host "Optional test source exists or runtime CMake file is absent."
           }
 
       - name: Build Windows VR support archive
         shell: pwsh
         run: |
+          $ErrorActionPreference = 'Stop'
+
           & ./tools/build-vr-first-person.ps1 -Step All
 
           if ($LASTEXITCODE -ne 0) {
@@ -198,6 +230,8 @@ jobs:
       - name: Configure Quest build
         shell: pwsh
         run: |
+          $ErrorActionPreference = 'Stop'
+
           & ./tools/build-quest.ps1 -Step Configure
 
           if ($LASTEXITCODE -ne 0) {
@@ -207,16 +241,20 @@ jobs:
       - name: Build Quest native libraries
         shell: pwsh
         run: |
+          $ErrorActionPreference = 'Stop'
+
           & ./tools/build-quest.ps1 -Step Native -Jobs 2
 
           if ($LASTEXITCODE -ne 0) {
-            throw "Quest native build failed."
+            throw "Quest native library build failed."
           }
 
-      - name: Package Quest APK
+      - name: Package and sign Quest APK
         shell: pwsh
         run: |
-          & ./tools/build-quest.ps1 -Step Apk
+          $ErrorActionPreference = 'Stop'
+
+          & ./tools/package-quest.ps1
 
           if ($LASTEXITCODE -ne 0) {
             throw "Quest APK packaging failed."
@@ -226,24 +264,29 @@ jobs:
             'releases\quest-preview\MMVR-Quest-preview.apk'
 
           if (-not (Test-Path $apk)) {
-            throw "APK was not generated: $apk"
+            throw "Expected APK was not generated: $apk"
           }
 
-          if ((Get-Item -LiteralPath $apk).Length -eq 0) {
-            throw "Generated APK is empty."
+          $apksigner = Get-ChildItem `
+            -Path (Join-Path $env:ANDROID_HOME 'build-tools\35.0.0') `
+            -Filter 'apksigner.bat' `
+            -File |
+            Select-Object -First 1
+
+          if (-not $apksigner) {
+            throw "Android apksigner was not found."
           }
 
-          $apksigner = Join-Path $env:ANDROID_HOME `
-            'build-tools\35.0.0\apksigner.bat'
+          & $apksigner.FullName verify --verbose $apk
 
-          & $apksigner verify --verbose $apk
           if ($LASTEXITCODE -ne 0) {
             throw "APK signature verification failed."
           }
 
-          Get-FileHash -LiteralPath $apk -Algorithm SHA256
+          Get-Item $apk | Select-Object FullName, Length
 
       - name: Upload Quest APK
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: MMVR-Quest-preview
@@ -251,12 +294,11 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-      - name: Upload diagnostic logs
+      - name: Upload build logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: MMVR-build-logs
-          path: |
-            logs/**
-          if-no-files-found: warn
+          name: MMVR-Quest-build-logs
+          path: logs/
+          if-no-files-found: ignore
           retention-days: 7
