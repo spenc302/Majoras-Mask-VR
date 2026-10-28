@@ -63,7 +63,7 @@ public final class StateRestartActivity extends Activity {
                     // Setup mounts the saved enabled pack set in a fresh main
                     // process. Native pending-state validation runs afterward.
                     startActivity(new Intent(this, SetupActivity.class)
-                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP));
+                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK));
                     finish();
                 } catch (RuntimeException failure) {
                     fail("Automatic restart failed. Open the game again manually.");

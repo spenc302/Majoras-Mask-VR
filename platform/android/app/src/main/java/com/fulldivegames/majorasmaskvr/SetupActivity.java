@@ -31,6 +31,7 @@ public final class SetupActivity extends Activity {
  }
  private Intent gameIntent(){
   Intent game=new Intent(this,GameActivity.class);
+  game.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
   // A local development request can run the native renderer in a normal panel
   // when headset room tracking is unavailable. Native code still gates the
   // diagnostic mode and blocks save writes; this is not a playable VR mode.
