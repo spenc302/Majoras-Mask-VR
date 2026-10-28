@@ -1,3 +1,4 @@
+
 name: Build Majora's Mask VR Quest APK
 
 on:
@@ -39,6 +40,11 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Set up CMake
+        uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: "3.26.4"
+
       - name: Set up Android SDK
         uses: android-actions/setup-android@v4
         with:
@@ -53,23 +59,19 @@ jobs:
           sdkmanager --install `
             "platforms;android-35" `
             "build-tools;35.0.0" `
-            "ndk;27.0.12077973" `
-            "cmake;3.26.4"
+            "ndk;27.0.12077973"
 
           if ($LASTEXITCODE -ne 0) {
             throw "Android SDK component installation failed."
           }
 
-          $cmakeBin = Join-Path $env:ANDROID_HOME "cmake\3.26.4\bin"
-
-          if (!(Test-Path $cmakeBin)) {
-            throw "Android SDK CMake directory not found: $cmakeBin"
-          }
-
-          $cmakeBin | Out-File -FilePath $env:GITHUB_PATH -Append
-
           "ANDROID_HOME=$env:ANDROID_HOME" |
             Out-File -FilePath $env:GITHUB_ENV -Append
+
+          cmake --version
+          if ($LASTEXITCODE -ne 0) {
+            throw "CMake verification failed."
+          }
 
       - name: Set Android NDK environment
         shell: pwsh
@@ -105,8 +107,8 @@ jobs:
             New-Item -ItemType Directory -Force -Path $_ | Out-Null
           }
 
-          # Do not create a placeholder archive.
-          # The Windows build must generate the real 2ship.o2r.
+          # Do not create a placeholder 2ship.o2r.
+          # The Windows build must generate the real archive.
 
       - name: Build Windows support archive
         shell: pwsh
