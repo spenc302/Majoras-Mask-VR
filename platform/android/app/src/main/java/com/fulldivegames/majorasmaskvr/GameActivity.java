@@ -253,11 +253,16 @@ public final class GameActivity extends SDLActivity {
                 phase.set(1);
                 commit.send(RESULT_OK, null);
 
-                // Normal Activity finish sends SDL_QUIT and releases its
-                // pause semaphore, then joins the native thread. This also
-                // handles a pause caused by opening the helper panel; no kill
-                // occurs until SDL has completed its cleanup.
-                runOnUiThread(this::finish);
+                // Terminate process immediately so StateRestartActivity detects
+                // process death and launches a fresh GameActivity instance.
+                runOnUiThread(() -> {
+                    try {
+                        finish();
+                    } catch (Throwable ignored) {}
+                    android.util.Log.i("MMVR-Lifecycle", "Game restarting; terminating process for helper relaunch");
+                    android.os.Process.killProcess(android.os.Process.myPid());
+                    System.exit(0);
+                });
 
                 return "";
             }
