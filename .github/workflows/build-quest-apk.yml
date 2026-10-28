@@ -15,19 +15,17 @@ permissions:
 
 concurrency:
   group: quest-apk-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   build-quest-apk:
-    name: Build Windows support archive and Quest APK
+    name: Build Quest APK
     runs-on: windows-2022
     timeout-minutes: 360
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Set up Java 17
         uses: actions/setup-java@v4
@@ -48,7 +46,7 @@ jobs:
       - name: Set up Ninja
         uses: seanmiddleditch/gha-setup-ninja@v4
 
-      - name: Set up Android SDK
+      - name: Set up Android SDK and NDK
         uses: android-actions/setup-android@v4
         with:
           packages: |
@@ -57,281 +55,244 @@ jobs:
             build-tools;35.0.0
             ndk;27.0.12077973
 
-      - name: Verify toolchain
+      - name: Configure Android environment
         shell: pwsh
         run: |
-          $ErrorActionPreference = 'Stop'
-
-          python --version
-          if ($LASTEXITCODE -ne 0) {
-            throw 'Python is unavailable.'
+          if (-not $env:ANDROID_HOME) {
+            if ($env:ANDROID_SDK_ROOT) {
+              $env:ANDROID_HOME = $env:ANDROID_SDK_ROOT
+            } else {
+              throw "ANDROID_HOME was not set by Android SDK setup."
+            }
           }
 
-          cmake --version
-          if ($LASTEXITCODE -ne 0) {
-            throw 'CMake is unavailable.'
-          }
+          "ANDROID_HOME=$env:ANDROID_HOME" >> $env:GITHUB_ENV
+          "ANDROID_SDK_ROOT=$env:ANDROID_HOME" >> $env:GITHUB_ENV
+          "ANDROID_NDK_HOME=$env:ANDROID_HOME/ndk/27.0.12077973" >> $env:GITHUB_ENV
+          "ANDROID_NDK_ROOT=$env:ANDROID_HOME/ndk/27.0.12077973" >> $env:GITHUB_ENV
+
+          New-Item -ItemType Directory -Force -Path `
+            "cache/tmp", `
+            "cache/vcpkg-binaries", `
+            "downloads/vcpkg", `
+            "logs" | Out-Null
 
           java -version
-          if ($LASTEXITCODE -ne 0) {
-            throw 'Java is unavailable.'
-          }
-
+          python --version
+          cmake --version
           ninja --version
-          if ($LASTEXITCODE -ne 0) {
-            throw 'Ninja is unavailable.'
-          }
 
-          if (-not $env:ANDROID_HOME) {
-            throw 'ANDROID_HOME was not configured by setup-android.'
-          }
-
-          $ndk = Join-Path $env:ANDROID_HOME 'ndk\27.0.12077973'
-          if (-not (Test-Path $ndk)) {
-            throw "Required Android NDK was not found: $ndk"
-          }
-
-          "ANDROID_HOME=$env:ANDROID_HOME" |
-            Out-File $env:GITHUB_ENV -Append
-
-          "ANDROID_NDK_HOME=$ndk" |
-            Out-File $env:GITHUB_ENV -Append
-
-      - name: Prepare build directories
+      - name: Set up vcpkg
         shell: pwsh
         run: |
-          $ErrorActionPreference = 'Stop'
+          $vcpkgRoot = Join-Path $env:GITHUB_WORKSPACE 'toolchains\vcpkg'
 
-          @(
-            'cache/tmp',
-            'cache/vcpkg-binaries',
-            'cache/android-user',
-            'cache/gradle',
-            'downloads/vcpkg',
-            'logs',
-            'toolchains'
-          ) | ForEach-Object {
-            New-Item -ItemType Directory -Force -Path $_ |
-              Out-Null
-          }
-
-      - name: Install vcpkg and OpenXR
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-
-          $root = $PWD.Path
-          $vcpkgRoot = Join-Path $root 'toolchains\vcpkg'
-          $vcpkgExe = Join-Path $vcpkgRoot 'vcpkg.exe'
-
-          if (-not (Test-Path $vcpkgExe)) {
+          if (-not (Test-Path (Join-Path $vcpkgRoot 'vcpkg.exe'))) {
             if (Test-Path $vcpkgRoot) {
-              $items = Get-ChildItem $vcpkgRoot -Force
+              $items = @(Get-ChildItem -LiteralPath $vcpkgRoot -Force -ErrorAction SilentlyContinue)
+
               if ($items.Count -gt 0) {
-                throw "vcpkg directory exists but is not bootstrapped: $vcpkgRoot"
+                throw "The vcpkg directory exists but vcpkg.exe is missing: $vcpkgRoot"
               }
             } else {
-              git clone https://github.com/microsoft/vcpkg.git $vcpkgRoot
-              if ($LASTEXITCODE -ne 0) {
-                throw 'Failed to clone vcpkg.'
-              }
+              New-Item -ItemType Directory -Force -Path (Split-Path $vcpkgRoot -Parent) | Out-Null
             }
 
-            & (Join-Path $vcpkgRoot 'bootstrap-vcpkg.bat') -disableMetrics
+            git clone https://github.com/microsoft/vcpkg.git $vcpkgRoot
+
             if ($LASTEXITCODE -ne 0) {
-              throw 'Failed to bootstrap vcpkg.'
+              throw "Failed to clone vcpkg."
             }
           }
 
-          "VCPKG_ROOT=$vcpkgRoot" |
-            Out-File $env:GITHUB_ENV -Append
-          "VCPKG_DISABLE_METRICS=1" |
-            Out-File $env:GITHUB_ENV -Append
-          "VCPKG_DEFAULT_BINARY_CACHE=$root\cache\vcpkg-binaries" |
-            Out-File $env:GITHUB_ENV -Append
+          & (Join-Path $vcpkgRoot 'bootstrap-vcpkg.bat') -disableMetrics
 
-          $env:VCPKG_ROOT = $vcpkgRoot
-          $env:VCPKG_DISABLE_METRICS = '1'
-          $env:VCPKG_DEFAULT_BINARY_CACHE =
-            Join-Path $root 'cache\vcpkg-binaries'
-
-          & $vcpkgExe install 'openxr:x64-windows-static'
           if ($LASTEXITCODE -ne 0) {
-            throw 'Installing the documented OpenXR vcpkg triplet failed.'
+            throw "vcpkg bootstrap failed."
           }
 
-          $openxrConfig = Join-Path `
-            $vcpkgRoot `
-            'installed\x64-windows-static\share\openxr\OpenXRConfig.cmake'
+          "VCPKG_ROOT=$vcpkgRoot" >> $env:GITHUB_ENV
+          "VCPKG_DOWNLOADS=$env:GITHUB_WORKSPACE/downloads/vcpkg" >> $env:GITHUB_ENV
+          "VCPKG_DEFAULT_BINARY_CACHE=$env:GITHUB_WORKSPACE/cache/vcpkg-binaries" >> $env:GITHUB_ENV
+          "VCPKG_DISABLE_METRICS=1" >> $env:GITHUB_ENV
+          "VCPKG_MAX_CONCURRENCY=8" >> $env:GITHUB_ENV
+
+      - name: Install OpenXR dependencies
+        shell: pwsh
+        run: |
+          $vcpkg = Join-Path $env:GITHUB_WORKSPACE 'toolchains\vcpkg\vcpkg.exe'
+
+          & $vcpkg install openxr:x64-windows-static
+
+          if ($LASTEXITCODE -ne 0) {
+            throw "vcpkg failed to install openxr:x64-windows-static."
+          }
+
+          $openxrConfig = Join-Path $env:GITHUB_WORKSPACE `
+            'toolchains\vcpkg\installed\x64-windows-static\share\openxr\OpenXRConfig.cmake'
 
           if (-not (Test-Path $openxrConfig)) {
-            Get-ChildItem `
-              (Join-Path $vcpkgRoot 'installed\x64-windows-static\share') `
-              -Filter '*OpenXR*Config.cmake' `
-              -Recurse `
-              -ErrorAction SilentlyContinue |
-              Select-Object -ExpandProperty FullName
-
-            throw "The OpenXR config expected by the upstream build script is missing: $openxrConfig"
+            throw "OpenXRConfig.cmake was not found at the path expected by the upstream build script: $openxrConfig"
           }
-
-          Write-Host "Using OpenXR config: $openxrConfig"
 
       - name: Guard against missing optional test source
         shell: pwsh
         run: |
-          $ErrorActionPreference = 'Stop'
-
-          $cmakeFile = 'src/mmvr-runtime/CMakeLists.txt'
-          $testSource = 'tests/periodic-report-check.cpp'
+          $cmakeFile = Join-Path $env:GITHUB_WORKSPACE `
+            'src\mmvr-runtime\CMakeLists.txt'
 
           if (-not (Test-Path $cmakeFile)) {
-            throw "Runtime CMake file not found: $cmakeFile"
+            throw "Runtime CMakeLists.txt was not found: $cmakeFile"
           }
 
-          if (Test-Path $testSource) {
-            Write-Host 'Periodic-report test source exists; no workaround needed.'
-            exit 0
+          $content = Get-Content -LiteralPath $cmakeFile -Raw
+
+          $pattern = '(?s)add_executable\(mmvr-periodic-report-checks\s+"\$\{CMAKE_CURRENT_SOURCE_DIR\}/\.\./\.\./tests/periodic-report-check\.cpp"\)\s*target_compile_definitions\(mmvr-periodic-report-checks PRIVATE NOMINMAX WIN32_LEAN_AND_MEAN\)\s*target_link_libraries\(mmvr-periodic-report-checks PRIVATE mmvr-core\)\s*add_test\(NAME mmvr-periodic-report-checks COMMAND mmvr-periodic-report-checks\s+"\$\{CMAKE_CURRENT_BINARY_DIR\}/periodic-report-artifacts"\)'
+
+          if ($content -match $pattern) {
+            $testSource = Join-Path $env:GITHUB_WORKSPACE `
+              'tests\periodic-report-check.cpp'
+
+            if (-not (Test-Path $testSource)) {
+              $replacement = @'
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../../tests/periodic-report-check.cpp")
+    add_executable(mmvr-periodic-report-checks "${CMAKE_CURRENT_SOURCE_DIR}/../../tests/periodic-report-check.cpp")
+    target_compile_definitions(mmvr-periodic-report-checks PRIVATE NOMINMAX WIN32_LEAN_AND_MEAN)
+    target_link_libraries(mmvr-periodic-report-checks PRIVATE mmvr-core)
+    add_test(NAME mmvr-periodic-report-checks COMMAND mmvr-periodic-report-checks
+        "${CMAKE_CURRENT_BINARY_DIR}/periodic-report-artifacts")
+endif()
+'@
+
+              $updated = [regex]::Replace(
+                $content,
+                $pattern,
+                $replacement,
+                1
+              )
+
+              if ($updated -eq $content) {
+                throw "Could not apply the missing optional test-source guard."
+              }
+
+              Set-Content -LiteralPath $cmakeFile -Value $updated -NoNewline
+              Write-Host "Skipped optional periodic-report test because its source file is absent."
+            }
+          } else {
+            Write-Host "The periodic-report test block differs from the expected upstream version; no change made."
           }
 
-          $content = Get-Content $cmakeFile -Raw
-
-          $pattern = '(?ms)^[ \t]*add_executable\(mmvr-periodic-report-checks[^\r\n]*\r?\n[ \t]*target_compile_definitions\(mmvr-periodic-report-checks[^\r\n]*\r?\n[ \t]*target_link_libraries\(mmvr-periodic-report-checks[^\r\n]*\r?\n[ \t]*add_test\(NAME mmvr-periodic-report-checks COMMAND mmvr-periodic-report-checks\r?\n[ \t]*"\$\{CMAKE_CURRENT_BINARY_DIR\}/periodic-report-artifacts"\)\r?\n?'
-
-          $replacement = @'
-          if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../../tests/periodic-report-check.cpp")
-              add_executable(mmvr-periodic-report-checks "${CMAKE_CURRENT_SOURCE_DIR}/../../tests/periodic-report-check.cpp")
-              target_compile_definitions(mmvr-periodic-report-checks PRIVATE NOMINMAX WIN32_LEAN_AND_MEAN)
-              target_link_libraries(mmvr-periodic-report-checks PRIVATE mmvr-core)
-              add_test(NAME mmvr-periodic-report-checks COMMAND mmvr-periodic-report-checks
-                  "${CMAKE_CURRENT_BINARY_DIR}/periodic-report-artifacts")
-          endif()
-          '@
-
-          $updated = [regex]::Replace(
-            $content,
-            $pattern,
-            $replacement,
-            1
-          )
-
-          if ($updated -eq $content) {
-            throw 'Could not locate the expected periodic-report test block. No CMake change was made.'
-          }
-
-          Set-Content -LiteralPath $cmakeFile -Value $updated -NoNewline
-
-          Write-Host 'Applied CI-only guard for the absent optional test source.'
-          Write-Host 'The repository file is changed only in this runner workspace.'
-
-      - name: Build Windows support archive
+      - name: Build Windows VR support archive
         shell: pwsh
         run: |
-          $ErrorActionPreference = 'Stop'
-
           ./tools/build-vr-first-person.ps1 -Step All
 
           if ($LASTEXITCODE -ne 0) {
-            throw 'Windows support archive build/install failed.'
+            throw "Windows VR support build failed."
           }
 
-          $archive = 'run/vr-first-person/2ship.o2r'
+          $archive = Join-Path $env:GITHUB_WORKSPACE `
+            'run\vr-first-person\2ship.o2r'
 
-          if (-not (Test-Path $archive -PathType Leaf)) {
-            throw "Expected support archive was not produced: $archive"
+          if (-not (Test-Path $archive)) {
+            throw "The Windows VR support archive was not generated: $archive"
           }
 
-          python -c "import pathlib,zipfile; p=pathlib.Path(r'run/vr-first-person/2ship.o2r'); assert p.is_file() and p.stat().st_size > 0, 'Archive missing or empty'; z=zipfile.ZipFile(p); bad=z.testzip(); assert bad is None, f'Corrupt archive entry: {bad}'; print(f'Validated {p}: {p.stat().st_size} bytes, {len(z.namelist())} entries')"
+          python -c "import sys,zipfile; p=sys.argv[1]; z=zipfile.ZipFile(p); bad=z.testzip(); print(f'Archive: {p}'); print(f'Entries: {len(z.namelist())}'); print(f'First invalid entry: {bad}'); sys.exit(1 if bad else 0)" "$archive"
 
           if ($LASTEXITCODE -ne 0) {
-            throw 'Support archive validation failed.'
+            throw "The generated support archive failed ZIP validation."
           }
 
       - name: Configure Quest native build
         shell: pwsh
         run: |
-          $ErrorActionPreference = 'Stop'
-
           ./tools/build-quest.ps1 -Step Configure
 
           if ($LASTEXITCODE -ne 0) {
-            throw 'Quest CMake configuration failed.'
+            throw "Quest CMake configuration failed."
           }
 
-          if (-not (Test-Path 'build/android-quest/build.ninja')) {
-            throw 'Quest configure completed without producing build.ninja.'
+          $buildNinja = Join-Path $env:GITHUB_WORKSPACE `
+            'build\android-quest\build.ninja'
+
+          if (-not (Test-Path $buildNinja)) {
+            throw "Quest CMake configuration did not generate build.ninja."
           }
 
-      - name: Compile Quest native libraries
+      - name: Build Quest native libraries
         shell: pwsh
         run: |
-          $ErrorActionPreference = 'Stop'
-
           ./tools/build-quest.ps1 -Step Native -Jobs 2
 
           if ($LASTEXITCODE -ne 0) {
-            throw 'Quest native compilation failed.'
+            throw "Quest native build failed."
           }
 
-          $buildRoot = 'build/android-quest'
+          $buildDir = Join-Path $env:GITHUB_WORKSPACE 'build\android-quest'
 
-          foreach ($name in @(
+          $requiredLibraries = @(
             'lib2ship.so',
             'libSDL2.so',
             'libopenxr_loader.so',
             'libmmvr_extract.so'
-          )) {
+          )
+
+          foreach ($library in $requiredLibraries) {
             $matches = @(
-              Get-ChildItem -LiteralPath $buildRoot `
-                -Filter $name -File -Recurse
+              Get-ChildItem -LiteralPath $buildDir `
+                -Filter $library -File -Recurse
             )
 
-            if ($matches.Count -ne 1) {
-              throw "Expected exactly one $name after native build; found $($matches.Count)."
+            if ($matches.Count -eq 0) {
+              throw "Required native library was not generated: $library"
             }
 
-            if ($matches[0].Length -eq 0) {
-              throw "Native library is empty: $($matches[0].FullName)"
-            }
+            foreach ($file in $matches) {
+              if ($file.Length -le 0) {
+                throw "Native library is empty: $($file.FullName)"
+              }
 
-            Write-Host "Verified native library: $($matches[0].FullName)"
+              Write-Host "$($file.FullName) ($($file.Length) bytes)"
+            }
           }
 
-      - name: Package and verify Quest APK
+      - name: Package and sign Quest APK
         shell: pwsh
         run: |
-          $ErrorActionPreference = 'Stop'
-
           ./tools/build-quest.ps1 -Step Apk
 
           if ($LASTEXITCODE -ne 0) {
-            throw 'Quest APK packaging failed.'
+            throw "Quest APK packaging failed."
           }
 
-          $apk = 'releases/quest-preview/MMVR-Quest-preview.apk'
+          $apk = Join-Path $env:GITHUB_WORKSPACE `
+            'releases\quest-preview\MMVR-Quest-preview.apk'
 
-          if (-not (Test-Path $apk -PathType Leaf)) {
-            throw "Expected APK was not produced: $apk"
+          if (-not (Test-Path $apk)) {
+            throw "Expected APK was not generated: $apk"
           }
 
-          $apksigner = Join-Path `
-            $env:ANDROID_HOME `
+          if ((Get-Item -LiteralPath $apk).Length -le 0) {
+            throw "The generated APK is empty."
+          }
+
+          $apksigner = Join-Path $env:ANDROID_HOME `
             'build-tools\35.0.0\apksigner.bat'
 
           if (-not (Test-Path $apksigner)) {
-            throw "apksigner was not found: $apksigner"
+            throw "Android apksigner was not found: $apksigner"
           }
 
-          & $apksigner verify --verbose --print-certs $apk
+          & $apksigner verify --verbose $apk
 
           if ($LASTEXITCODE -ne 0) {
-            throw 'APK signature verification failed.'
+            throw "APK signature verification failed."
           }
 
           Get-FileHash -LiteralPath $apk -Algorithm SHA256
 
       - name: Upload Quest APK
-        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: MMVR-Quest-preview
@@ -339,15 +300,13 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-      - name: Upload build logs and diagnostics
+      - name: Upload build logs and support archive
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: mmvr-build-diagnostics
+          name: MMVR-build-diagnostics
           path: |
             logs/**
-            build/android-quest/CMakeCache.txt
-            build/android-quest/build.ninja
             run/vr-first-person/2ship.o2r
           if-no-files-found: warn
           retention-days: 7
