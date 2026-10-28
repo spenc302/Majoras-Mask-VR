@@ -23,6 +23,7 @@ public final class StateRestartActivity extends Activity {
 
     @Override public void onCreate(Bundle saved) {
         super.onCreate(saved);
+        android.util.Log.i("MMVR-Lifecycle", "[MMVR-Lifecycle] StateRestartActivity.onCreate()");
         status = new TextView(this);
         status.setTextSize(24);
         status.setPadding(48, 48, 48, 48);
@@ -38,6 +39,7 @@ public final class StateRestartActivity extends Activity {
             return;
         }
         policy = new StateRestartPolicy(SystemClock.elapsedRealtime());
+        android.util.Log.i("MMVR-Lifecycle", "[MMVR-Lifecycle] StateRestartActivity sending COMMIT receiver");
         ResultReceiver commit = new ResultReceiver(handler) {
             @Override protected void onReceiveResult(int code, Bundle data) {
                 if (code == Activity.RESULT_OK) policy.commit(SystemClock.elapsedRealtime());
@@ -60,6 +62,8 @@ public final class StateRestartActivity extends Activity {
                 break;
             case LAUNCH:
                 try {
+                    android.util.Log.i("MMVR-Lifecycle",
+                            "[MMVR-Lifecycle] StateRestartActivity launching SetupActivity (game process dead)");
                     // Setup mounts the saved enabled pack set in a fresh main
                     // process. Native pending-state validation runs afterward.
                     startActivity(new Intent(this, SetupActivity.class)

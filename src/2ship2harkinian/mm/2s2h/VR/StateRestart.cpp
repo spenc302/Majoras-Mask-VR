@@ -11,6 +11,7 @@
 #elif defined(__ANDROID__)
 #include <SDL.h>
 #include <jni.h>
+#include <android/log.h>
 #endif
 
 bool MMVR_RequestStateRestart(std::string& error) {
@@ -22,6 +23,7 @@ bool MMVR_RequestStateRestart(std::string& error) {
 #ifdef _WIN32
         if (!mmvr::state_restart::StartWindowsHelper(error)) return false;
 #elif defined(__ANDROID__)
+        __android_log_print(ANDROID_LOG_INFO, "MMVR-Lifecycle", "[MMVR-Lifecycle] MMVR_RequestStateRestart: calling Activity helper");
         auto* env = static_cast<JNIEnv*>(SDL_AndroidGetJNIEnv());
         jobject activity = static_cast<jobject>(SDL_AndroidGetActivity());
         if (!env || !activity) throw std::runtime_error("Android activity is unavailable.");
@@ -50,6 +52,9 @@ bool MMVR_RequestStateRestart(std::string& error) {
         // SDL's normal exit joins the game thread and releases XR/resources.
         // In Android, GameActivity.onDestroy then ends only this app process;
         // the restart Activity lives in a separate process and waits for death.
+#ifdef __ANDROID__
+        __android_log_print(ANDROID_LOG_INFO, "MMVR-Lifecycle", "[MMVR-Lifecycle] Requesting native window close");
+#endif
         context->GetWindow()->Close();
         return true;
     } catch (const std::exception& failure) {

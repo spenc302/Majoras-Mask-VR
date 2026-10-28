@@ -202,11 +202,6 @@ void LoadVRPacks() {
         SPDLOG_INFO("[MMVR-TextureDiagnostics] Defaulted gEnhancements.Mods.AlternateAssets to 1 and saved.");
     }
 }
-        CVarSetInteger("gEnhancements.Mods.AlternateAssets", 1);
-        CVarSetInteger("gVR.ModAssetsDefaultApplied", 1);
-        CVarSave();
-    }
-}
 }
 extern "C" void MMVR_RefreshModCatalog() { RefreshVRPacks(); }
 #endif

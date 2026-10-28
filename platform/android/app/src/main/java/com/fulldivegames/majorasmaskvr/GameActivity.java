@@ -34,12 +34,15 @@ public final class GameActivity extends SDLActivity {
     protected void onDestroy() {
         boolean finished = isFinishing() && !isChangingConfigurations();
 
+        android.util.Log.i("MMVR-Lifecycle",
+                "[MMVR-Lifecycle] GameActivity.onDestroy() entered; finishing=" + finished);
+
         super.onDestroy();
 
         if (finished) {
             android.util.Log.i(
                     "MMVR-Lifecycle",
-                    "Native game closed; ending process for a clean relaunch"
+                    "[MMVR-Lifecycle] super.onDestroy() completed; ending process"
             );
 
             android.os.Process.killProcess(android.os.Process.myPid());
@@ -142,6 +145,8 @@ public final class GameActivity extends SDLActivity {
         return updater.status();
     }
 
+    private static final long RESTART_FALLBACK_MS = 10000;
+
     private final java.util.concurrent.atomic.AtomicBoolean stateRestarting =
             new java.util.concurrent.atomic.AtomicBoolean();
 
@@ -227,6 +232,8 @@ public final class GameActivity extends SDLActivity {
 
                 android.os.Bundle request = new android.os.Bundle();
 
+                android.util.Log.i("MMVR-Lifecycle",
+                        "[MMVR-Lifecycle] IPC READY sent to StateRestartActivity");
                 request.putBinder(StateRestartActivity.OWNER, owner);
                 request.putParcelable(StateRestartActivity.READY, receiver);
 
@@ -251,18 +258,35 @@ public final class GameActivity extends SDLActivity {
 
             if (failure.get().isEmpty() && commit != null) {
                 phase.set(1);
+                android.util.Log.i("MMVR-Lifecycle",
+                        "[MMVR-Lifecycle] IPC COMMIT received and acknowledged");
                 commit.send(RESULT_OK, null);
 
-                // Terminate process immediately so StateRestartActivity detects
-                // process death and launches a fresh GameActivity instance.
+                // Orderly teardown: native code closes the SDL window next,
+                // which joins the game thread and destroys the XR session.
+                // finish() then drives onDestroy(), which ends the process.
                 runOnUiThread(() -> {
                     try {
                         finish();
                     } catch (Throwable ignored) {}
-                    android.util.Log.i("MMVR-Lifecycle", "Game restarting; terminating process for helper relaunch");
+                });
+
+                // Safety net only: if native teardown hangs, end the process so
+                // StateRestartActivity can still relaunch the game.
+                Thread fallback = new Thread(() -> {
+                    try {
+                        Thread.sleep(RESTART_FALLBACK_MS);
+                    } catch (InterruptedException ignored) {
+                        return;
+                    }
+                    android.util.Log.w("MMVR-Lifecycle",
+                            "[MMVR-Lifecycle] Teardown still running after "
+                                    + RESTART_FALLBACK_MS + " ms; forcing process exit");
                     android.os.Process.killProcess(android.os.Process.myPid());
                     System.exit(0);
-                });
+                }, "MMVR-RestartFallback");
+                fallback.setDaemon(true);
+                fallback.start();
 
                 return "";
             }
