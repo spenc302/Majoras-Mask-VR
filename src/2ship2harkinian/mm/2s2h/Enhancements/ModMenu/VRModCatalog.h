@@ -3,6 +3,7 @@
 #include "mods.h"
 #include "updater.h"
 #include "ship/config/Config.h"
+#include <spdlog/spdlog.h>
 #include <set>
 namespace {
 std::map<std::string, std::string> legacyVRPackIds;
@@ -176,18 +177,31 @@ void LoadVRPacks() {
     RefreshVRPacks();
     mmvr::mountedModPacks.clear();
     size_t failed = 0;
+    const int altAssets = CVarGetInteger("gEnhancements.Mods.AlternateAssets", 0);
+    SPDLOG_INFO("[MMVR-TextureDiagnostics] LoadVRPacks starting. Total packs found: {}, AlternateAssets CVar: {}", mmvr::modPacks.size(), altAssets);
     for (const auto& pack : mmvr::modPacks) if (pack.enabled) {
         try {
             auto archive = GetArchiveManager()->AddArchive(pack.path);
-            if (archive) mmvr::mountedModPacks.push_back(pack);
-            else { ++failed; SPDLOG_WARN("Mod pack could not load: {}", pack.name); }
+            if (archive) {
+                mmvr::mountedModPacks.push_back(pack);
+                SPDLOG_INFO("[MMVR-TextureDiagnostics] Successfully mounted pack: '{}' (path: '{}')", pack.name, pack.path);
+            }
+            else { ++failed; SPDLOG_WARN("[MMVR-TextureDiagnostics] Mod pack could not load: {}", pack.name); }
         } catch (const std::exception& e) {
-            ++failed; SPDLOG_WARN("Mod pack could not load: {} ({})", pack.name, e.what());
+            ++failed; SPDLOG_WARN("[MMVR-TextureDiagnostics] Mod pack could not load: {} ({})", pack.name, e.what());
         }
     }
+    SPDLOG_INFO("[MMVR-TextureDiagnostics] VFS archive mounting complete. Mounted: {}, Failed: {}, VFS total archives: {}",
+                mmvr::mountedModPacks.size(), failed, GetArchiveManager()->GetArchives() ? GetArchiveManager()->GetArchives()->size() : 0);
     if (failed) mmvr::updateStatus = std::to_string(failed) + " selected packs failed to load; check compatible format and log.";
     // Alt textures in packs are not selected by the port unless this switch is on.
     if (!CVarGet("gVR.ModAssetsDefaultApplied")) {
+        CVarSetInteger("gEnhancements.Mods.AlternateAssets", 1);
+        CVarSetInteger("gVR.ModAssetsDefaultApplied", 1);
+        CVarSave();
+        SPDLOG_INFO("[MMVR-TextureDiagnostics] Defaulted gEnhancements.Mods.AlternateAssets to 1 and saved.");
+    }
+}
         CVarSetInteger("gEnhancements.Mods.AlternateAssets", 1);
         CVarSetInteger("gVR.ModAssetsDefaultApplied", 1);
         CVarSave();
