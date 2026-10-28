@@ -244,9 +244,3 @@ jobs:
             build/**/*.log
           if-no-files-found: ignore
           retention-days: 7
-
-          path: |
-            logs/**/*.log
-            build/**/*.log
-          if-no-files-found: ignore
-          retention-days: 7
