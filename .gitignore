@@ -22,3 +22,5 @@ imgui.ini
 saves/
 mods/
 texturepacks/
+.idea/
+.artifacts/
