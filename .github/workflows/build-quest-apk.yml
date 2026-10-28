@@ -180,10 +180,10 @@ jobs:
             throw "Failed to clone vcpkg."
           }
 
-          $openxrPort = Join-Path $vcpkgRoot 'ports\openxr'
+          $openxrPort = Join-Path $vcpkgRoot 'ports\openxr-loader'
 
           if (-not (Test-Path $openxrPort)) {
-            throw "Fresh vcpkg checkout is missing ports/openxr."
+            throw "Fresh vcpkg checkout is missing ports/openxr-loader."
           }
 
           $vcpkgExe = Join-Path $vcpkgRoot 'vcpkg.exe'
@@ -212,18 +212,23 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $vcpkg = Join-Path $env:VCPKG_ROOT 'vcpkg.exe'
 
-          & $vcpkg install openxr:x64-windows-static
+          & $vcpkg install openxr-loader:x64-windows-static
 
           if ($LASTEXITCODE -ne 0) {
             throw "OpenXR dependency installation failed."
           }
 
-          $openxrConfig = Join-Path $env:VCPKG_ROOT `
-            'installed\x64-windows-static\share\openxr\OpenXRConfig.cmake'
+          $openxrConfig = Get-ChildItem `
+            -Path (Join-Path $env:VCPKG_ROOT 'installed\x64-windows-static\share') `
+            -Filter 'OpenXRConfig.cmake' `
+            -Recurse -File |
+            Select-Object -First 1
 
-          if (-not (Test-Path $openxrConfig)) {
-            throw "OpenXR CMake config was not installed: $openxrConfig"
+          if (-not $openxrConfig) {
+            throw "OpenXR CMake config was not installed."
           }
+
+          Write-Host "Found OpenXR config: $($openxrConfig.FullName)"
 
       - name: Skip unavailable optional test source
         shell: pwsh
