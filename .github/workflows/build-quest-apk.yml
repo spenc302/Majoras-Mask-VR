@@ -19,7 +19,7 @@ jobs:
   build-quest-apk:
     name: Build Quest APK
     runs-on: windows-2022
-    timeout-minutes: 180
+    timeout-minutes: 360
 
     steps:
       - name: Checkout repository
@@ -27,7 +27,6 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
-          submodules: recursive
 
       - name: Set up Java 17
         uses: actions/setup-java@v4
@@ -43,7 +42,10 @@ jobs:
       - name: Set up CMake
         uses: jwlawson/actions-setup-cmake@v2
         with:
-          cmake-version: "3.26.4"
+          cmake-version: "3.30.3"
+
+      - name: Set up Ninja
+        uses: seanmiddleditch/gha-setup-ninja@v4
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v4
@@ -71,6 +73,11 @@ jobs:
           cmake --version
           if ($LASTEXITCODE -ne 0) {
             throw "CMake verification failed."
+          }
+
+          ninja --version
+          if ($LASTEXITCODE -ne 0) {
+            throw "Ninja verification failed."
           }
 
       - name: Set Android NDK environment
@@ -104,36 +111,128 @@ jobs:
             "toolchains",
             "run/vr-first-person"
           ) | ForEach-Object {
-            New-Item -ItemType Directory -Force -Path $_ | Out-Null
+            New-Item -ItemType Directory -Force -Path $_ |
+              Out-Null
           }
 
-          # The Windows build must generate the real 2ship.o2r.
-          # Never create a fake placeholder archive.
+      - name: Verify build tools
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
 
-      - name: Install OpenXR for Windows build
+          python --version
+          cmake --version
+          java -version
+          ninja --version
+
+          if ($LASTEXITCODE -ne 0) {
+            throw "Build tool verification failed."
+          }
+
+      - name: Install vcpkg and OpenXR
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
 
           $vcpkgRoot = Join-Path $PWD "toolchains\vcpkg"
-          $vcpkgExe = Join-Path $vcpkgRoot "vcpkg.exe"
-          $openxrConfig = Join-Path $vcpkgRoot "installed\x64-windows-static\share\openxr\OpenXRConfig.cmake"
 
-          if (!(Test-Path $vcpkgExe)) {
-            throw "vcpkg.exe not found: $vcpkgExe"
+          if (!(Test-Path $vcpkgRoot)) {
+            git clone https://github.com/microsoft/vcpkg.git $vcpkgRoot
+
+            if ($LASTEXITCODE -ne 0) {
+              throw "Failed to clone vcpkg."
+            }
           }
 
-          & $vcpkgExe install "openxr:x64-windows-static"
+          $bootstrap = Join-Path $vcpkgRoot "bootstrap-vcpkg.bat"
+
+          if (!(Test-Path $bootstrap)) {
+            throw "vcpkg bootstrap script not found: $bootstrap"
+          }
+
+          & $bootstrap -disableMetrics
 
           if ($LASTEXITCODE -ne 0) {
-            throw "Failed to install OpenXR for Windows."
+            throw "Failed to bootstrap vcpkg."
           }
+
+          $vcpkgExe = Join-Path $vcpkgRoot "vcpkg.exe"
+
+          if (!(Test-Path $vcpkgExe)) {
+            throw "vcpkg.exe was not created."
+          }
+
+          "VCPKG_ROOT=$vcpkgRoot" |
+            Out-File -FilePath $env:GITHUB_ENV -Append
+
+          "VCPKG_DISABLE_METRICS=1" |
+            Out-File -FilePath $env:GITHUB_ENV -Append
+
+          $env:VCPKG_ROOT = $vcpkgRoot
+          $env:VCPKG_DISABLE_METRICS = "1"
+
+          & $vcpkgExe install "openxr-loader:x64-windows-static"
+
+          if ($LASTEXITCODE -ne 0) {
+            throw "OpenXR loader dependency installation failed."
+          }
+
+          $openxrConfig = Join-Path $vcpkgRoot "installed\x64-windows-static\share\openxr-loader\OpenXRConfig.cmake"
 
           if (!(Test-Path $openxrConfig)) {
-            throw "OpenXRConfig.cmake missing after OpenXR installation: $openxrConfig"
+            Get-ChildItem `
+              (Join-Path $vcpkgRoot "installed\x64-windows-static\share") `
+              -Filter "*OpenXR*Config.cmake" `
+              -Recurse `
+              -ErrorAction SilentlyContinue |
+              Select-Object -ExpandProperty FullName
+
+            throw "OpenXRConfig.cmake was not found at the expected path: $openxrConfig"
           }
 
-          Write-Host "OpenXR CMake configuration found."
+          Write-Host "OpenXR configuration found: $openxrConfig"
+
+      - name: Prepare Windows build script
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          $scriptPath = "tools/build-vr-first-person.ps1"
+
+          if (!(Test-Path $scriptPath)) {
+            throw "Windows build script not found: $scriptPath"
+          }
+
+          $content = Get-Content $scriptPath -Raw
+
+          $content = $content.Replace(
+            "VCPKG_MAX_CONCURRENCY='8'",
+            "VCPKG_MAX_CONCURRENCY='2'"
+          )
+
+          $content = $content.Replace(
+            "--parallel 8",
+            "--parallel 2"
+          )
+
+          $content = $content.Replace(
+            "share\openxr')",
+            "share\openxr-loader')"
+          )
+
+          Set-Content -Path $scriptPath -Value $content -NoNewline
+
+          $content = Get-Content $scriptPath -Raw
+
+          if ($content.Contains("--parallel 8")) {
+            throw "Failed to limit Windows build parallelism."
+          }
+
+          if (!$content.Contains("share\openxr-loader')")) {
+            throw "Failed to update the OpenXR CMake directory."
+          }
+
+          Write-Host "Windows build script prepared."
 
       - name: Build Windows support archive
         shell: pwsh
@@ -146,35 +245,19 @@ jobs:
             throw "Windows support build failed."
           }
 
-          $candidates = @(
-            "run/vr-first-person/2ship.o2r",
-            "src/2ship2harkinian/2ship.o2r",
-            "build/windows-vr-first-person/2ship.o2r"
-          )
+          $archive = "run/vr-first-person/2ship.o2r"
 
-          $archive = $candidates |
-            Where-Object { Test-Path $_ -PathType Leaf } |
-            Select-Object -First 1
-
-          if (!$archive) {
-            throw "Windows build did not produce 2ship.o2r."
+          if (!(Test-Path $archive -PathType Leaf)) {
+            throw "Required support archive was not generated: $archive"
           }
 
-          $destination = "run/vr-first-person/2ship.o2r"
-          $sourcePath = [System.IO.Path]::GetFullPath($archive)
-          $destPath = [System.IO.Path]::GetFullPath($destination)
-
-          if ($sourcePath -ne $destPath) {
-            Copy-Item -LiteralPath $sourcePath -Destination $destPath -Force
-          }
-
-          python -c "import sys,zipfile; p=sys.argv[1]; z=zipfile.ZipFile(p); bad=z.testzip(); print('Archive entries:',len(z.namelist())); assert bad is None, f'Corrupt entry: {bad}'; assert z.namelist(), 'Archive is empty'; z.close()" $destination
+          python -c "import sys,zipfile; p=sys.argv[1]; z=zipfile.ZipFile(p); bad=z.testzip(); assert bad is None, f'Corrupt archive entry: {bad}'; assert z.namelist(), 'Archive is empty'; print('Archive entries:', len(z.namelist())); z.close()" $archive
 
           if ($LASTEXITCODE -ne 0) {
-            throw "Generated 2ship.o2r is not a valid ZIP archive."
+            throw "Generated support archive failed validation."
           }
 
-          Get-Item $destination |
+          Get-Item $archive |
             Format-List Name, Length, FullName
 
       - name: Configure Quest native build
@@ -199,7 +282,7 @@ jobs:
             throw "Quest native compilation failed."
           }
 
-      - name: Package and sign Quest APK
+      - name: Package Quest APK
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
