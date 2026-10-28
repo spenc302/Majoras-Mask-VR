@@ -18,7 +18,8 @@ inline constexpr int AssignmentFirst = int(Setting::Count), ResetSettingsRow = A
                      MainMenuRow = AssignmentFirst + MaxItemSlots + 7,
                      SkipDayRow = AssignmentFirst + MaxItemSlots + 8,
                      RefreshModsRow = AssignmentFirst + MaxItemSlots + 9,
-                     SaveStateFirstRow = AssignmentFirst + MaxItemSlots + 10,
+                     RestartGameRow = AssignmentFirst + MaxItemSlots + 10,
+                     SaveStateFirstRow = AssignmentFirst + MaxItemSlots + 11,
                      SkipTwoHoursRow = SaveStateFirstRow + 6,
                      TutorialFirstRow = SkipTwoHoursRow + 1,
                      NativeOptionsRow = TutorialFirstRow + ControlTutorialCount,
@@ -356,6 +357,7 @@ inline constexpr MenuEntry OrderedMenu[] = {
     { DebugReturnRow, 33 },
     { SharedFilesRow, 34 },
     { RefreshModsRow, 34 },
+    { RestartGameRow, 34 },
     { int(Setting::HapticStrength), 22 },
     { int(Setting::PauseOnFocusLoss), 22 },
     { int(Setting::CheckUpdatesOnLaunch), 23 },
@@ -513,6 +515,7 @@ inline const char* MenuActionLabel(int row) {
         case DebugReturnRow: return "Return to test hall (debug save)";
         case SharedFilesRow: return "Connect MMVR shared folder (Quest)";
         case RefreshModsRow: return "Refresh mods and texture packs";
+        case RestartGameRow: return "Restart game";
         case CheckUpdateRow: return "Check for updates";
         case InstallUpdateRow: return "Install available update";
     }
@@ -561,13 +564,15 @@ struct MenuState {
                 return MenuRows + section;
             if (expanded[section])
                 for (auto entry : OrderedMenu)
-                    if (entry.section == section && MenuRowVisible(entry.row) && RowAvailable(entry.row) && at-- == 0)
+                    if (entry.section == section && entry.row != RestartGameRow && MenuRowVisible(entry.row) && RowAvailable(entry.row) && at-- == 0)
                         return resolveForm && entry.row == int(Setting::EyeHeight) && ProfileForForm(playerForm)
                                    ? int(ProfileForForm(playerForm)->eyeHeight) : entry.row;
             if (expanded[section] && section == 34) {
                 const auto entries=VisibleModEntries(expandedModFolders);
                 if (at < int(entries.size())) return entries[at]<0 ? entries[at] : ModPackRow+entries[at];
                 at -= int(entries.size());
+                if (MenuRowVisible(RestartGameRow) && RowAvailable(RestartGameRow) && at-- == 0)
+                    return RestartGameRow;
             }
         }
         return -1;
@@ -580,8 +585,13 @@ struct MenuState {
             ++count;
             if (expanded[section])
                 for (auto entry : OrderedMenu)
-                    count += entry.section == section && MenuRowVisible(entry.row) && RowAvailable(entry.row);
-            if (expanded[section] && section == 34) count += int(VisibleModEntries(expandedModFolders).size());
+                    if (entry.section == section && entry.row != RestartGameRow && MenuRowVisible(entry.row) && RowAvailable(entry.row))
+                        ++count;
+            if (expanded[section] && section == 34) {
+                count += int(VisibleModEntries(expandedModFolders).size());
+                if (MenuRowVisible(RestartGameRow) && RowAvailable(RestartGameRow))
+                    ++count;
+            }
         }
         return count;
     }

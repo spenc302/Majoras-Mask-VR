@@ -14,7 +14,6 @@
 #endif
 
 bool MMVR_RequestStateRestart(std::string& error) {
-    if (!mmvr::ExactStatesEnabled) { error="Save states are disabled. Use menu and owl saving."; return false; }
     error.clear();
     try {
         auto* context = Ship::Context::GetRawInstance();

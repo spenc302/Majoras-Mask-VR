@@ -1131,6 +1131,9 @@ class TheaterRuntime {
                 } else if (confirmed == RefreshModsRow) {
                     if (refreshMods) refreshMods();
                     menu.Normalize();
+                } else if (confirmed == RestartGameRow) {
+                    if (restartGame) restartGame();
+                    menu.Normalize();
                 } else if (confirmed == int(Setting::GoronRollBinding)) {
                     GetBindingEditor().Begin(ControlCount);
                 } else if (BindingSetting(confirmed)) {

@@ -388,6 +388,8 @@ inline void Draw(ImDrawList& list, const UiDrawFrame& frame, ImTextureID frameTe
                 Text(list, 64, y, "Connect MMVR shared folder (Quest)", 25);
             else if (i == RefreshModsRow)
                 Text(list, 64, y, "Refresh mods and texture packs", 25);
+            else if (i == RestartGameRow)
+                Text(list, 64, y, "Restart game", 25);
             else
                 Text(list, 64, y, i == CheckUpdateRow ? "Check for updates" : (confirmUpdateInstall ? "Confirm install (save states may break)" : "Install available update"), 25);
         }

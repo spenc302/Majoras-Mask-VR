@@ -4,6 +4,7 @@
 #include "mods.h"
 #include "ui.h"
 #include "device_info.h"
+#include "StateRestart.h"
 #include <libultraship/bridge/consolevariablebridge.h>
 extern "C" void MMVR_RefreshModCatalog();
 #include "ship/Context.h"
@@ -219,6 +220,14 @@ static void ExportDiagnostics() {
 }
 extern "C" void MMVR_PollUpdater() {
     mmvr::refreshMods = RefreshMods;
+    mmvr::restartGame = []() {
+        std::string error;
+        if (!MMVR_RequestStateRestart(error)) {
+            mmvr::updateStatus = "Restart failed: " + error;
+        } else {
+            mmvr::updateStatus = "Restarting game...";
+        }
+    };
     mmvr::exportDiagnostics = ExportDiagnostics;
 
     mmvr::sharedFilesCallback = SharedFiles;

@@ -15,6 +15,7 @@ inline bool (*validateModSelection)(const std::vector<std::string>&, std::string
 inline bool (*stageModSelection)(const std::vector<std::string>&, std::string&) = nullptr;
 inline void (*refreshMods)() = nullptr;
 inline void (*toggleMod)(int) = nullptr;
+inline void (*restartGame)() = nullptr;
 inline bool ValidateModIds(const std::vector<ModPack>& packs, const std::vector<std::string>& ids,
                            std::string& error) {
     std::set<std::string> seen;
