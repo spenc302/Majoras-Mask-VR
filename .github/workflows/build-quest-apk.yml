@@ -1,3 +1,4 @@
+
 name: Build Majora's Mask VR Quest APK
 
 on:
@@ -52,7 +53,73 @@ jobs:
             platform-tools
             platforms;android-35
             build-tools;35.0.0
-            ndk;27.0.12077973
+
+      - name: Force install and verify Android NDK
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          if (-not $env:ANDROID_HOME) {
+            $env:ANDROID_HOME = $env:ANDROID_SDK_ROOT
+          }
+
+          if (-not $env:ANDROID_HOME) {
+            throw "ANDROID_HOME and ANDROID_SDK_ROOT are both missing."
+          }
+
+          $cmdlineTools = Join-Path $env:ANDROID_HOME 'cmdline-tools'
+
+          if (-not (Test-Path $cmdlineTools)) {
+            throw "Android command-line tools directory not found: $cmdlineTools"
+          }
+
+          $sdkmanager = Get-ChildItem `
+            -Path $cmdlineTools `
+            -Filter 'sdkmanager.bat' `
+            -Recurse -File |
+            Select-Object -First 1
+
+          if (-not $sdkmanager) {
+            throw "sdkmanager.bat was not found under $cmdlineTools"
+          }
+
+          Write-Host "Using SDK manager: $($sdkmanager.FullName)"
+          Write-Host "Android SDK: $env:ANDROID_HOME"
+
+          & $sdkmanager.FullName `
+            "--sdk_root=$env:ANDROID_HOME" `
+            "--install" `
+            "ndk;27.0.12077973"
+
+          if ($LASTEXITCODE -ne 0) {
+            throw "sdkmanager failed to install NDK 27.0.12077973."
+          }
+
+          $ndk = Join-Path $env:ANDROID_HOME 'ndk\27.0.12077973'
+          $ndkBuild = Join-Path $ndk 'ndk-build.cmd'
+          $sourceProperties = Join-Path $ndk 'source.properties'
+
+          if (-not (Test-Path $ndkBuild)) {
+            throw "NDK build tool is missing: $ndkBuild"
+          }
+
+          if (-not (Test-Path $sourceProperties)) {
+            throw "NDK source.properties is missing: $sourceProperties"
+          }
+
+          $revision = Get-Content $sourceProperties |
+            Select-String '^\s*Pkg\.Revision\s*='
+
+          if (-not $revision -or $revision.Line -notmatch '27\.0\.12077973') {
+            throw "Installed NDK revision does not match 27.0.12077973. Found: $revision"
+          }
+
+          "ANDROID_HOME=$env:ANDROID_HOME" >> $env:GITHUB_ENV
+          "ANDROID_SDK_ROOT=$env:ANDROID_HOME" >> $env:GITHUB_ENV
+          "ANDROID_NDK_HOME=$ndk" >> $env:GITHUB_ENV
+          "ANDROID_NDK_ROOT=$ndk" >> $env:GITHUB_ENV
+
+          Write-Host "Verified Android NDK 27.0.12077973 at $ndk"
 
       - name: Configure build environment
         shell: pwsh
@@ -69,8 +136,8 @@ jobs:
 
           $ndk = Join-Path $env:ANDROID_HOME 'ndk\27.0.12077973'
 
-          if (-not (Test-Path $ndk)) {
-            throw "Required Android NDK was not found: $ndk"
+          if (-not (Test-Path (Join-Path $ndk 'ndk-build.cmd'))) {
+            throw "Required Android NDK was not found or is incomplete: $ndk"
           }
 
           "ANDROID_HOME=$env:ANDROID_HOME" >> $env:GITHUB_ENV
@@ -90,6 +157,9 @@ jobs:
           cmake --version
           ninja --version
 
+          Write-Host "ANDROID_HOME=$env:ANDROID_HOME"
+          Write-Host "ANDROID_NDK_HOME=$ndk"
+
       - name: Set up vcpkg
         shell: pwsh
         run: |
@@ -97,8 +167,6 @@ jobs:
           $root = $env:GITHUB_WORKSPACE
           $vcpkgRoot = Join-Path $root 'toolchains\vcpkg'
 
-          # Start with a clean checkout so a stale or incomplete
-          # ports directory cannot be reused.
           if (Test-Path $vcpkgRoot) {
             Remove-Item -LiteralPath $vcpkgRoot -Recurse -Force
           }
@@ -107,11 +175,13 @@ jobs:
             -Path (Split-Path $vcpkgRoot -Parent) | Out-Null
 
           git clone https://github.com/microsoft/vcpkg.git $vcpkgRoot
+
           if ($LASTEXITCODE -ne 0) {
             throw "Failed to clone vcpkg."
           }
 
           $openxrPort = Join-Path $vcpkgRoot 'ports\openxr'
+
           if (-not (Test-Path $openxrPort)) {
             throw "Fresh vcpkg checkout is missing ports/openxr."
           }
@@ -119,6 +189,7 @@ jobs:
           $vcpkgExe = Join-Path $vcpkgRoot 'vcpkg.exe'
 
           & (Join-Path $vcpkgRoot 'bootstrap-vcpkg.bat') -disableMetrics
+
           if ($LASTEXITCODE -ne 0) {
             throw "Failed to bootstrap vcpkg."
           }
@@ -130,6 +201,7 @@ jobs:
           "VCPKG_MAX_CONCURRENCY=8" >> $env:GITHUB_ENV
 
           & $vcpkgExe version
+
           if ($LASTEXITCODE -ne 0) {
             throw "vcpkg verification failed."
           }
@@ -141,6 +213,7 @@ jobs:
           $vcpkg = Join-Path $env:VCPKG_ROOT 'vcpkg.exe'
 
           & $vcpkg install openxr:x64-windows-static
+
           if ($LASTEXITCODE -ne 0) {
             throw "OpenXR dependency installation failed."
           }
@@ -168,6 +241,7 @@ jobs:
             }
 
             $start = -1
+
             for ($i = 0; $i -lt $lines.Count; $i++) {
               if ($lines[$i] -match 'add_executable\(mmvr-periodic-report-checks') {
                 $start = $i
