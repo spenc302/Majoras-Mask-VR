@@ -64,6 +64,7 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
+
           $ndkPath = Join-Path $env:ANDROID_HOME "ndk\27.0.12077973"
 
           if (!(Test-Path $ndkPath)) {
@@ -73,9 +74,7 @@ jobs:
           "ANDROID_NDK_HOME=$ndkPath" |
             Out-File -FilePath $env:GITHUB_ENV -Append
 
-          "ANDROID_NDK_HOME set to $ndkPath"
-
-      - name: Prepare build directories and asset placeholders
+      - name: Prepare build directories
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
@@ -83,13 +82,6 @@ jobs:
           New-Item -ItemType Directory -Force `
             -Path logs, cache/tmp, downloads, toolchains, run/vr-first-person |
             Out-Null
-
-          if (!(Test-Path "run/vr-first-person/2ship.o2r")) {
-            [System.IO.File]::WriteAllBytes(
-              "run/vr-first-person/2ship.o2r",
-              [byte[]]@(0, 0, 0, 0)
-            )
-          }
 
           python --version
           if ($LASTEXITCODE -ne 0) {
@@ -106,32 +98,87 @@ jobs:
             throw "Java verification failed"
           }
 
+      - name: Obtain real support archive from upstream
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          $releaseUrl = "https://api.github.com/repos/fulldivegames/Majoras-Mask-VR/releases/tags/v0.36"
+
+          $release = Invoke-RestMethod `
+            -Uri $releaseUrl `
+            -Headers @{ "User-Agent" = "Majoras-Mask-VR-CI" }
+
+          $asset = $release.assets |
+            Where-Object {
+              $_.name -match '(?i)windows.*\.zip$'
+            } |
+            Select-Object -First 1
+
+          if (!$asset) {
+            throw "Could not find a Windows ZIP asset in upstream release v0.36"
+          }
+
+          $downloadZip = Join-Path $env:RUNNER_TEMP $asset.name
+          $extractDir = Join-Path $env:RUNNER_TEMP "mmvr-upstream-v036"
+
+          Write-Host "Downloading upstream asset: $($asset.name)"
+
+          Invoke-WebRequest `
+            -Uri $asset.browser_download_url `
+            -OutFile $downloadZip
+
+          if (!(Test-Path $downloadZip)) {
+            throw "Upstream release download failed"
+          }
+
+          Expand-Archive `
+            -LiteralPath $downloadZip `
+            -DestinationPath $extractDir `
+            -Force
+
+          $supportArchive = Get-ChildItem `
+            -LiteralPath $extractDir `
+            -Filter "2ship.o2r" `
+            -File `
+            -Recurse |
+            Select-Object -First 1
+
+          if (!$supportArchive) {
+            throw "The upstream Windows ZIP did not contain 2ship.o2r. No placeholder will be used."
+          }
+
+          python -c "import sys,zipfile; z=zipfile.ZipFile(sys.argv[1]); assert z.testzip() is None; print('Validated support ZIP with', len(z.namelist()), 'entries')" $supportArchive.FullName
+
+          if ($LASTEXITCODE -ne 0) {
+            throw "The upstream 2ship.o2r file is not a valid ZIP archive"
+          }
+
+          Copy-Item `
+            -LiteralPath $supportArchive.FullName `
+            -Destination "run/vr-first-person/2ship.o2r" `
+            -Force
+
+          Write-Host "Installed validated support archive."
+
       - name: Configure Quest native build
         shell: pwsh
         run: |
+          $ErrorActionPreference = "Stop"
           ./tools/build-quest.ps1 -Step Configure
-
-          if ($LASTEXITCODE -ne 0) {
-            throw "Quest CMake configuration failed"
-          }
 
       - name: Build Quest native libraries
         shell: pwsh
         run: |
+          $ErrorActionPreference = "Stop"
           ./tools/build-quest.ps1 -Step Native -Jobs 2
-
-          if ($LASTEXITCODE -ne 0) {
-            throw "Quest native compilation failed"
-          }
 
       - name: Package and sign Quest APK
         shell: pwsh
         run: |
-          ./tools/build-quest.ps1 -Step Apk
+          $ErrorActionPreference = "Stop"
 
-          if ($LASTEXITCODE -ne 0) {
-            throw "Quest APK packaging failed"
-          }
+          ./tools/build-quest.ps1 -Step Apk
 
           $apk = "releases/quest-preview/MMVR-Quest-preview.apk"
 
