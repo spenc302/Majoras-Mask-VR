@@ -107,8 +107,33 @@ jobs:
             New-Item -ItemType Directory -Force -Path $_ | Out-Null
           }
 
-          # Do not create a placeholder 2ship.o2r.
-          # The Windows build must generate the real archive.
+          # The Windows build must generate the real 2ship.o2r.
+          # Never create a fake placeholder archive.
+
+      - name: Install OpenXR for Windows build
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          $vcpkgRoot = Join-Path $PWD "toolchains\vcpkg"
+          $vcpkgExe = Join-Path $vcpkgRoot "vcpkg.exe"
+          $openxrConfig = Join-Path $vcpkgRoot "installed\x64-windows-static\share\openxr\OpenXRConfig.cmake"
+
+          if (!(Test-Path $vcpkgExe)) {
+            throw "vcpkg.exe not found: $vcpkgExe"
+          }
+
+          & $vcpkgExe install "openxr:x64-windows-static"
+
+          if ($LASTEXITCODE -ne 0) {
+            throw "Failed to install OpenXR for Windows."
+          }
+
+          if (!(Test-Path $openxrConfig)) {
+            throw "OpenXRConfig.cmake missing after OpenXR installation: $openxrConfig"
+          }
+
+          Write-Host "OpenXR CMake configuration found."
 
       - name: Build Windows support archive
         shell: pwsh
@@ -214,6 +239,12 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Majoras-Mask-VR-Build-Logs
+          path: |
+            logs/**/*.log
+            build/**/*.log
+          if-no-files-found: ignore
+          retention-days: 7
+
           path: |
             logs/**/*.log
             build/**/*.log
