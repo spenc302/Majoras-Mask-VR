@@ -11,6 +11,7 @@ int MMVR_NotebookTouch(float* x, float* y);
 void MMVR_CameraSaveLoaded(void);
 bool MMVR_BeginFormReload(struct PlayState*, struct Player*);
 void MMVR_ScheduleFormReset(void);
+void MMVR_CancelFormReset(void);
 void MMVR_PollFormReset(struct PlayState*);
 int MMVR_FormReloadActive(struct PlayState*);
 void MMVR_IntroTestPrepareSave(void);

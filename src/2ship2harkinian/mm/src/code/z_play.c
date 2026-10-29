@@ -430,6 +430,10 @@ Gfx* Play_SetFog(PlayState* this, Gfx* gfx) {
 }
 
 void Play_Destroy(GameState* thisx) {
+#ifdef MMVR_ENABLE
+    extern void MMVR_CancelFormReset(void);
+    MMVR_CancelFormReset();
+#endif
     PlayState* this = (PlayState*)thisx;
     GraphicsContext* gfxCtx = this->state.gfxCtx;
 
@@ -1806,6 +1810,9 @@ void Play_Draw(PlayState* this) {
 void Play_Main(GameState* thisx) {
     static Input* prevInput = NULL;
     PlayState* this = (PlayState*)thisx;
+#ifdef MMVR_ENABLE
+    extern void MMVR_PollFormReset(PlayState*);
+#endif
 
     prevInput = CONTROLLER1(&this->state);
     DebugDisplay_Init();
@@ -1814,6 +1821,7 @@ void Play_Main(GameState* thisx) {
         GraphicsContext* gfxCtx = this->state.gfxCtx;
 #ifdef MMVR_ENABLE
         MMVR_BeforePlayUpdate(this);
+        MMVR_PollFormReset(this);
 #endif
 
         if (1) {

@@ -238,9 +238,6 @@ mmvr::CameraFrame Update(const mmvr::TrackingFrame& rawTracking) {
     result.trackingTime = tracking.timeSeconds;
     auto* play = gPlayState;
     Player* p = play ? GET_PLAYER(play) : nullptr;
-    if (play) {
-        MMVR_PollFormReset(play);
-    }
 #if defined(MMVR_STATE_NATIVE_BACKEND)
     if (stateTrackingPending) return result;
 #endif
@@ -937,26 +934,69 @@ extern "C" void MMVR_IntroTestPrepareSave() {
     }
 }
 static bool pendingFormReset = false;
-static int formResetRetries = 0;
+static unsigned formResetRetries = 0;
+static PlayState* formResetLastPlay = nullptr;
+static int formResetLastScene = -1;
 
 extern "C" void MMVR_ScheduleFormReset() {
+    // A newer committed restore replaces any older deferred request.
     pendingFormReset = true;
     formResetRetries = 0;
-    __android_log_print(ANDROID_LOG_INFO, "MMVR-Lifecycle", "[MMVR-Lifecycle] Form reset scheduled after save restore commit");
+    formResetLastPlay = nullptr;
+    formResetLastScene = -1;
+    __android_log_print(ANDROID_LOG_INFO, "MMVR-Lifecycle",
+                        "[MMVR-Lifecycle] form_reset scheduled reason=native_restore_commit");
+}
+
+extern "C" void MMVR_CancelFormReset() {
+    if (pendingFormReset) {
+        __android_log_print(ANDROID_LOG_INFO, "MMVR-Lifecycle",
+                            "[MMVR-Lifecycle] form_reset cancelled reason=gameplay_shutdown retries=%u",
+                            formResetRetries);
+    }
+    pendingFormReset = false;
+    formResetRetries = 0;
+    formResetLastPlay = nullptr;
+    formResetLastScene = -1;
 }
 
 extern "C" void MMVR_PollFormReset(PlayState* play) {
     if (!pendingFormReset || !play) return;
+
+    // A transient scene transition or missing player must not cancel the
+    // request. Play_Destroy explicitly cancels it when gameplay is abandoned.
+    if (play != gPlayState || !play->state.running || gGameState != &play->state) return;
+
     Player* player = GET_PLAYER(play);
     if (!player) return;
+
+    const bool lifecycleChanged =
+        formResetLastPlay != play || formResetLastScene != play->sceneId;
+    if (lifecycleChanged) {
+        formResetLastPlay = play;
+        formResetLastScene = play->sceneId;
+        __android_log_print(ANDROID_LOG_INFO, "MMVR-Lifecycle",
+                            "[MMVR-Lifecycle] form_reset retry_context scene=%d retries=%u",
+                            play->sceneId, formResetRetries);
+    }
+
     if (MMVR_BeginFormReload(play, player)) {
         pendingFormReset = false;
-        __android_log_print(ANDROID_LOG_INFO, "MMVR-Lifecycle", "[MMVR-Lifecycle] Deferred form reset executed successfully");
-    } else {
-        ++formResetRetries;
-        if (formResetRetries % 60 == 0) {
-            __android_log_print(ANDROID_LOG_INFO, "MMVR-Lifecycle", "[MMVR-Lifecycle] Deferred form reset pending preconditions, retry count: %d", formResetRetries);
-        }
+        __android_log_print(ANDROID_LOG_INFO, "MMVR-Lifecycle",
+                            "[MMVR-Lifecycle] form_reset success scene=%d retries=%u",
+                            play->sceneId, formResetRetries);
+        formResetRetries = 0;
+        formResetLastPlay = nullptr;
+        formResetLastScene = -1;
+        return;
+    }
+
+    ++formResetRetries;
+    // Log the first failed attempt, then at most once per 60 gameplay updates.
+    if (formResetRetries == 1 || formResetRetries % 60 == 0) {
+        __android_log_print(ANDROID_LOG_INFO, "MMVR-Lifecycle",
+                            "[MMVR-Lifecycle] form_reset retry scene=%d count=%u reason=preconditions_not_ready",
+                            play->sceneId, formResetRetries);
     }
 }
 

@@ -133,9 +133,14 @@ inline void PollPendingStateResume() {
         LoadExactNativeState(1,pending->directory);
         committed=true;
         bootstrap=false;
-        mmvrgame::ClearHolster();
-        mmvrgame::ResetHandGeometry();
-        MMVR_CameraSaveLoaded();
+        // Each post-commit hook is isolated: failure in one must not prevent
+        // the remaining hooks or make the committed native restore appear to fail.
+        try { mmvrgame::ClearHolster(); }
+        catch(...) { std::ofstream("mmvr-save-states.log",std::ios::app)<<"Post-commit hook failed: ClearHolster\n"; }
+        try { mmvrgame::ResetHandGeometry(); }
+        catch(...) { std::ofstream("mmvr-save-states.log",std::ios::app)<<"Post-commit hook failed: ResetHandGeometry\n"; }
+        try { MMVR_CameraSaveLoaded(); }
+        catch(...) { std::ofstream("mmvr-save-states.log",std::ios::app)<<"Post-commit hook failed: MMVR_CameraSaveLoaded\n"; }
         MMVR_ScheduleFormReset();
         status="Loaded state slot "+std::to_string(slot)+" with its saved settings and packs.";
         try {CVarSave();if(!Ship::Context::GetRawInstance()->GetConfig()->LastSaveSucceeded())
