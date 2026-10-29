@@ -1,3 +1,4 @@
+
 name: Build Majora's Mask VR Quest APK
 
 on:
@@ -25,52 +26,150 @@ jobs:
     timeout-minutes: 60
 
     steps:
-      - name: Git Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          submodules: true
+          submodules: recursive
 
       - name: Install dependencies
+        shell: bash
         run: |
-          sudo apt-get update
-          sudo apt-get install -y $(cat src/2ship2harkinian/.github/workflows/apt-deps.txt) libzip-dev zipcmp zipmerge ziptool ninja-build
+          set -euo pipefail
 
-      - name: Install latest SDL
+          sudo apt-get update
+
+          DEPS_FILE="src/2ship2harkinian/.github/workflows/apt-deps.txt"
+          test -f "$DEPS_FILE"
+
+          # Normalize Windows line endings and remove blank/comment lines.
+          mapfile -t DEPS < <(
+            sed 's/\r$//; s/#.*$//' "$DEPS_FILE" |
+              tr ' ' '\n' |
+              sed '/^[[:space:]]*$/d'
+          )
+
+          if [ "${#DEPS[@]}" -eq 0 ]; then
+            echo "::error::No dependencies found in $DEPS_FILE"
+            exit 1
+          fi
+
+          echo "Installing dependencies:"
+          printf '  %s\n' "${DEPS[@]}"
+
+          sudo apt-get install -y \
+            "${DEPS[@]}" \
+            libzip-dev \
+            zipcmp \
+            zipmerge \
+            ziptool \
+            ninja-build
+
+      - name: Install SDL 2.30.3
+        shell: bash
         run: |
+          set -euo pipefail
+
           mkdir -p deps
-          wget https://github.com/libsdl-org/SDL/releases/download/release-2.30.3/SDL2-2.30.3.tar.gz
+          wget -q \
+            https://github.com/libsdl-org/SDL/releases/download/release-2.30.3/SDL2-2.30.3.tar.gz
+
           tar -xzf SDL2-2.30.3.tar.gz -C deps
           cd deps/SDL2-2.30.3
+
           ./configure --enable-hidapi-libusb
-          make -j 10
+          make -j"$(nproc)"
           sudo make install
           sudo cp -av /usr/local/lib/libSDL* /lib/x86_64-linux-gnu/
 
-      - name: Install latest tinyxml2
+      - name: Install tinyxml2 10.0.0
+        shell: bash
         run: |
+          set -euo pipefail
+
           sudo apt-get remove -y libtinyxml2-dev || true
+
           mkdir -p deps
-          wget https://github.com/leethomason/tinyxml2/archive/refs/tags/10.0.0.tar.gz
+          wget -q \
+            https://github.com/leethomason/tinyxml2/archive/refs/tags/10.0.0.tar.gz
+
           tar -xzf 10.0.0.tar.gz -C deps
-          cd deps/tinyxml2-10.0.0
-          mkdir -p build
-          cd build
-          cmake ..
-          make
-          sudo make install
+          cmake -S deps/tinyxml2-10.0.0 \
+                -B deps/tinyxml2-10.0.0/build \
+                -DCMAKE_BUILD_TYPE=Release
+
+          cmake --build deps/tinyxml2-10.0.0/build \
+            --parallel "$(nproc)"
+
+          sudo cmake --install deps/tinyxml2-10.0.0/build
+
+      - name: Configure host build
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          cmake \
+            -S src/2ship2harkinian \
+            -B build-cmake \
+            -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release
 
       - name: Generate 2ship.o2r
+        shell: bash
         run: |
-          cmake --no-warn-unused-cli -Hsrc/2ship2harkinian -Bbuild-cmake -GNinja -DCMAKE_BUILD_TYPE:STRING=Release
-          cmake --build build-cmake --config Release --target Generate2ShipOtr -j3
-          mkdir -p run/vr-first-person
-          cp build-cmake/mm/2ship.o2r run/vr-first-person/2ship.o2r
+          set -euo pipefail
 
-      - name: Upload 2ship.o2r
+          cmake --build build-cmake \
+            --config Release \
+            --target Generate2ShipOtr \
+            --parallel 3
+
+          ARCHIVE="build-cmake/mm/2ship.o2r"
+          DEST="run/vr-first-person/2ship.o2r"
+
+          if [ ! -s "$ARCHIVE" ]; then
+            echo "::error::Generated support archive is missing or empty: $ARCHIVE"
+            exit 1
+          fi
+
+          mkdir -p "$(dirname "$DEST")"
+          cp "$ARCHIVE" "$DEST"
+
+          echo "Generated support archive:"
+          ls -lh "$DEST"
+
+      - name: Validate support archive
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          python - run/vr-first-person/2ship.o2r <<'PY'
+          import sys
+          import zipfile
+
+          path = sys.argv[1]
+
+          if not zipfile.is_zipfile(path):
+              raise SystemExit(f"Not a valid ZIP-compatible OTR archive: {path}")
+
+          with zipfile.ZipFile(path) as archive:
+              entries = archive.namelist()
+              bad_entry = archive.testzip()
+
+          if bad_entry:
+              raise SystemExit(f"Corrupt archive entry: {bad_entry}")
+
+          if not entries:
+              raise SystemExit("Support archive contains no entries")
+
+          print(f"Validated {path}: {len(entries)} entries")
+          PY
+
+      - name: Upload support archive
         uses: actions/upload-artifact@v4
         with:
           name: ship-otr
           path: run/vr-first-person/2ship.o2r
+          if-no-files-found: error
           retention-days: 3
 
   build-quest-apk:
@@ -83,9 +182,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          submodules: true
+          submodules: recursive
 
-      - name: Download 2ship.o2r
+      - name: Download support archive
         uses: actions/download-artifact@v4
         with:
           name: ship-otr
@@ -119,7 +218,7 @@ jobs:
             build-tools;35.0.0
             ndk;27.0.12077973
 
-      - name: Force install and verify Android NDK
+      - name: Verify Android SDK and NDK
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
@@ -134,7 +233,7 @@ jobs:
 
           $cmdlineTools = Join-Path $env:ANDROID_HOME 'cmdline-tools'
 
-          if (-not (Test-Path $cmdlineTools)) {
+          if (-not (Test-Path -LiteralPath $cmdlineTools)) {
             throw "Android command-line tools directory not found: $cmdlineTools"
           }
 
@@ -157,26 +256,26 @@ jobs:
             "ndk;27.0.12077973"
 
           if ($LASTEXITCODE -ne 0) {
-            throw "sdkmanager failed to install NDK 27.0.12077973."
+            throw "Failed to install Android NDK 27.0.12077973."
           }
 
           $ndk = Join-Path $env:ANDROID_HOME 'ndk\27.0.12077973'
           $ndkBuild = Join-Path $ndk 'ndk-build.cmd'
           $sourceProperties = Join-Path $ndk 'source.properties'
 
-          if (-not (Test-Path $ndkBuild)) {
+          if (-not (Test-Path -LiteralPath $ndkBuild)) {
             throw "NDK build tool is missing: $ndkBuild"
           }
 
-          if (-not (Test-Path $sourceProperties)) {
+          if (-not (Test-Path -LiteralPath $sourceProperties)) {
             throw "NDK source.properties is missing: $sourceProperties"
           }
 
-          $revision = Get-Content $sourceProperties |
+          $revision = Get-Content -LiteralPath $sourceProperties |
             Select-String '^\s*Pkg\.Revision\s*='
 
           if (-not $revision -or $revision.Line -notmatch '27\.0\.12077973') {
-            throw "Installed NDK revision does not match 27.0.12077973. Found: $revision"
+            throw "Installed NDK revision is incorrect. Found: $revision"
           }
 
           "ANDROID_HOME=$env:ANDROID_HOME" >> $env:GITHUB_ENV
@@ -184,7 +283,7 @@ jobs:
           "ANDROID_NDK_HOME=$ndk" >> $env:GITHUB_ENV
           "ANDROID_NDK_ROOT=$ndk" >> $env:GITHUB_ENV
 
-          Write-Host "Verified Android NDK 27.0.12077973 at $ndk"
+          Write-Host "Verified NDK at $ndk"
 
       - name: Configure build environment
         shell: pwsh
@@ -201,7 +300,7 @@ jobs:
 
           $ndk = Join-Path $env:ANDROID_HOME 'ndk\27.0.12077973'
 
-          if (-not (Test-Path (Join-Path $ndk 'ndk-build.cmd'))) {
+          if (-not (Test-Path -LiteralPath (Join-Path $ndk 'ndk-build.cmd'))) {
             throw "Required Android NDK was not found or is incomplete: $ndk"
           }
 
@@ -222,16 +321,23 @@ jobs:
 
           Write-Host "ANDROID_HOME=$env:ANDROID_HOME"
           Write-Host "ANDROID_NDK_HOME=$ndk"
+          Write-Host "JAVA_HOME=$env:JAVA_HOME"
 
+      # Temporary compatibility workaround retained from the current workflow.
+      # Remove this step after the missing test-source/CMake mismatch is fixed
+      # directly in the repository.
       - name: Skip unavailable optional test source
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
+
           $root = $env:GITHUB_WORKSPACE
           $cmakeFile = Join-Path $root 'src\mmvr-runtime\CMakeLists.txt'
           $testSource = Join-Path $root 'tests\periodic-report-check.cpp'
 
-          if ((Test-Path $cmakeFile) -and -not (Test-Path $testSource)) {
+          if ((Test-Path -LiteralPath $cmakeFile) -and
+              -not (Test-Path -LiteralPath $testSource)) {
+
             $lines = [System.Collections.Generic.List[string]]::new()
 
             Get-Content -LiteralPath $cmakeFile | ForEach-Object {
@@ -274,17 +380,42 @@ jobs:
             Write-Host "Optional test source exists or runtime CMake file is absent."
           }
 
-      - name: Verify 2ship.o2r archive
+      - name: Verify downloaded support archive
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
+
           $archive = Join-Path $env:GITHUB_WORKSPACE 'run\vr-first-person\2ship.o2r'
 
-          if (!(Test-Path $archive)) {
+          if (-not (Test-Path -LiteralPath $archive)) {
             throw "Support archive was not downloaded: $archive"
           }
 
-          python -c "import sys,zipfile; z=zipfile.ZipFile(sys.argv[1]); bad=z.testzip(); print('Archive entries:',len(z.namelist())); sys.exit(1 if bad else 0)" "$archive"
+          if ((Get-Item -LiteralPath $archive).Length -le 0) {
+            throw "Support archive is empty: $archive"
+          }
+
+          @'
+          import sys
+          import zipfile
+
+          path = sys.argv[1]
+
+          if not zipfile.is_zipfile(path):
+              raise SystemExit(f"Invalid ZIP-compatible archive: {path}")
+
+          with zipfile.ZipFile(path) as archive:
+              entries = archive.namelist()
+              bad_entry = archive.testzip()
+
+          if bad_entry:
+              raise SystemExit(f"Corrupt archive entry: {bad_entry}")
+
+          if not entries:
+              raise SystemExit("Support archive contains no entries")
+
+          print(f"Validated {path}: {len(entries)} entries")
+          '@ | python - $archive
 
           if ($LASTEXITCODE -ne 0) {
             throw "Support archive validation failed."
@@ -312,7 +443,7 @@ jobs:
             throw "Quest native library build failed."
           }
 
-      - name: Package and sign Quest APK
+      - name: Package and verify Quest APK
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
@@ -326,27 +457,30 @@ jobs:
           $apk = Join-Path $env:GITHUB_WORKSPACE `
             'releases\quest-preview\MMVR-Quest-preview.apk'
 
-          if (!(Test-Path $apk)) {
+          if (-not (Test-Path -LiteralPath $apk)) {
             throw "Expected APK was not generated: $apk"
           }
 
-          $apksigner = Get-ChildItem `
-            -Path (Join-Path $env:ANDROID_HOME 'build-tools\35.0.0') `
-            -Filter 'apksigner.bat' `
-            -File |
-            Select-Object -First 1
-
-          if (!-not $apksigner) {
-            throw "Android apksigner was not found."
+          if ((Get-Item -LiteralPath $apk).Length -le 0) {
+            throw "Generated APK is empty: $apk"
           }
 
-          & $apksigner.FullName verify --verbose $apk
+          $signer = Join-Path $env:ANDROID_HOME `
+            'build-tools\35.0.0\apksigner.bat'
+
+          if (-not (Test-Path -LiteralPath $signer)) {
+            throw "Android apksigner was not found: $signer"
+          }
+
+          & $signer verify --verbose --print-certs $apk
 
           if ($LASTEXITCODE -ne 0) {
             throw "APK signature verification failed."
           }
 
-          Get-Item $apk | Select-Object FullName, Length
+          Get-FileHash -LiteralPath $apk -Algorithm SHA256
+          Get-Item -LiteralPath $apk |
+            Select-Object FullName, Length
 
       - name: Upload Quest APK
         if: success()
@@ -356,6 +490,15 @@ jobs:
           path: releases/quest-preview/MMVR-Quest-preview.apk
           if-no-files-found: error
           retention-days: 14
+
+      - name: Upload build logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: MMVR-Quest-build-logs
+          path: logs/
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Upload build logs
         if: always()
