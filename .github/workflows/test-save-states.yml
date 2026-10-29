@@ -1,0 +1,32 @@
+name: Test Save State Archive
+
+on:
+  push:
+    branches: [quest-restart-feature]
+  pull_request:
+    branches: [quest-restart-feature]
+
+jobs:
+  test-save-states:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build g++
+
+      - name: Configure tests
+        run: |
+          cmake -S src/mmvr-runtime/save_states -B build-tests -G Ninja -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build test suite
+        run: |
+          cmake --build build-tests
+
+      - name: Run CTest suite
+        run: |
+          ctest --test-dir build-tests --output-on-failure
