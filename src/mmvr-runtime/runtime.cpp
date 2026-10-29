@@ -356,6 +356,10 @@ void Hr(HRESULT result, const char* operation) {
         throw std::runtime_error(std::string(operation) + " HRESULT=" + std::to_string(result));
 }
 #endif
+static bool restartInProgress = false;
+extern "C" void MMVR_MarkRestartInProgress() {
+    restartInProgress = true;
+}
 class TheaterRuntime {
     XrInstance instance = XR_NULL_HANDLE;
     XrSystemId system = XR_NULL_SYSTEM_ID;
@@ -1584,7 +1588,11 @@ class TheaterRuntime {
                     refresh = 0;
                     cadence.Reset();
                 } else if (change.state == XR_SESSION_STATE_EXITING || change.state == XR_SESSION_STATE_LOSS_PENDING) {
-                    throw std::runtime_error("VR session ended; desktop remains available; restart launcher for VR");
+                    if (!restartInProgress) {
+                        throw std::runtime_error("VR session ended; desktop remains available; restart launcher for VR");
+                    } else {
+                        Log("Ignoring session exiting error during active restart");
+                    }
                 }
             }
             event = { XR_TYPE_EVENT_DATA_BUFFER };
@@ -1807,6 +1815,27 @@ class TheaterRuntime {
         return !inputRelease && (SelectorGrip() < .25f || holsterGripClaimed);
     }
     ~TheaterRuntime() {
+        Log(std::string("=== MMVR runtime shutdown (session running at teardown: ") + (session != XR_NULL_HANDLE ? "yes" : "no") + ")");
+        if (restartInProgress && session != XR_NULL_HANDLE) {
+            Log("Requesting OpenXR session exit for restart...");
+            xrRequestExitSession(session);
+            auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+            while (std::chrono::steady_clock::now() < deadline) {
+                XrEventDataBuffer event{ XR_TYPE_EVENT_DATA_BUFFER };
+                if (xrPollEvent(instance, &event) == XR_SUCCESS) {
+                    if (event.type == XR_TYPE_EVENT_DATA_SESSION_STATE_CHANGED) {
+                        auto& change = *reinterpret_cast<XrEventDataSessionStateChanged*>(&event);
+                        if (change.state == XR_SESSION_STATE_STOPPING) {
+                            Log("Received XR_SESSION_STATE_STOPPING during teardown; ending session");
+                            xrEndSession(session);
+                            break;
+                        }
+                    }
+                } else {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                }
+            }
+        }
         menu.Close();
         selector.Cancel();
         // Error paths may have an acquired image or begun frame. Balance them before teardown.
