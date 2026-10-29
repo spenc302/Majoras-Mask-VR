@@ -4,9 +4,11 @@ on:
   push:
     branches:
       - develop
+      - quest-restart-feature
   pull_request:
     branches:
       - develop
+      - quest-restart-feature
   workflow_dispatch:
 
 permissions:
