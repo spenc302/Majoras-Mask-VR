@@ -122,18 +122,18 @@ jobs:
             --target Generate2ShipOtr \
             --parallel 3
 
-          ARCHIVE="build-cmake/mm/2ship.o2r"
+          ARCHIVE=$(find build-cmake -name "2ship.o2r" -type f | head -n 1)
           DEST="run/vr-first-person/2ship.o2r"
 
-          if [ ! -s "$ARCHIVE" ]; then
-            echo "::error::Generated support archive is missing or empty: $ARCHIVE"
+          if [ -z "$ARCHIVE" ] || [ ! -s "$ARCHIVE" ]; then
+            echo "::error::Generated support archive is missing or empty in build-cmake"
             exit 1
           fi
 
           mkdir -p "$(dirname "$DEST")"
           cp "$ARCHIVE" "$DEST"
 
-          echo "Generated support archive:"
+          echo "Generated support archive from $ARCHIVE:"
           ls -lh "$DEST"
 
       - name: Validate support archive
@@ -489,15 +489,6 @@ jobs:
           path: releases/quest-preview/MMVR-Quest-preview.apk
           if-no-files-found: error
           retention-days: 14
-
-      - name: Upload build logs
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: MMVR-Quest-build-logs
-          path: logs/
-          if-no-files-found: ignore
-          retention-days: 7
 
       - name: Upload build logs
         if: always()
