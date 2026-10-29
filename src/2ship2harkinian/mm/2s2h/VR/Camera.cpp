@@ -23,6 +23,9 @@
 #include "BeanPresentation.h"
 #include "ViewTools.h"
 #include "Interactions.h"
+#if defined(__ANDROID__)
+#include <android/log.h>
+#endif
 #include "NativeCombat.h"
 #include "NativeForms.h"
 #include "NativeActions.h"
