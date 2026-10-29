@@ -1132,6 +1132,11 @@ class TheaterRuntime {
                     if (refreshMods) refreshMods();
                     menu.Normalize();
                 } else if (confirmed == RestartGameRow) {
+                    #ifdef __ANDROID__
+                    if (session != XR_NULL_HANDLE) {
+                        xrRequestExitSession(session);
+                    }
+                    #endif
                     if (restartGame) restartGame();
                     menu.Normalize();
                 } else if (confirmed == int(Setting::GoronRollBinding)) {
