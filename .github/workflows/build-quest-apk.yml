@@ -17,14 +17,77 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  generate-2ship-otr:
+    name: Generate 2ship.o2r (Ubuntu)
+    runs-on: ubuntu-22.04
+    timeout-minutes: 60
+
+    steps:
+      - name: Git Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y $(cat src/2ship2harkinian/.github/workflows/apt-deps.txt) libzip-dev zipcmp zipmerge ziptool ninja-build
+
+      - name: Install latest SDL
+        run: |
+          mkdir -p deps
+          wget https://github.com/libsdl-org/SDL/releases/download/release-2.30.3/SDL2-2.30.3.tar.gz
+          tar -xzf SDL2-2.30.3.tar.gz -C deps
+          cd deps/SDL2-2.30.3
+          ./configure --enable-hidapi-libusb
+          make -j 10
+          sudo make install
+          sudo cp -av /usr/local/lib/libSDL* /lib/x86_64-linux-gnu/
+
+      - name: Install latest tinyxml2
+        run: |
+          sudo apt-get remove -y libtinyxml2-dev || true
+          mkdir -p deps
+          wget https://github.com/leethomason/tinyxml2/archive/refs/tags/10.0.0.tar.gz
+          tar -xzf 10.0.0.tar.gz -C deps
+          cd deps/tinyxml2-10.0.0
+          mkdir -p build
+          cd build
+          cmake ..
+          make
+          sudo make install
+
+      - name: Generate 2ship.o2r
+        run: |
+          cmake --no-warn-unused-cli -Hsrc/2ship2harkinian -Bbuild-cmake -GNinja -DCMAKE_BUILD_TYPE:STRING=Release
+          cmake --build build-cmake --config Release --target Generate2ShipOtr -j3
+          mkdir -p run/vr-first-person
+          cp build-cmake/mm/2ship.o2r run/vr-first-person/2ship.o2r
+
+      - name: Upload 2ship.o2r
+        uses: actions/upload-artifact@v4
+        with:
+          name: ship-otr
+          path: run/vr-first-person/2ship.o2r
+          retention-days: 3
+
   build-quest-apk:
     name: Build Quest APK
+    needs: generate-2ship-otr
     runs-on: windows-2022
     timeout-minutes: 360
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Download 2ship.o2r
+        uses: actions/download-artifact@v4
+        with:
+          name: ship-otr
+          path: run/vr-first-person
 
       - name: Set up Java 17
         uses: actions/setup-java@v4
@@ -148,8 +211,6 @@ jobs:
 
           New-Item -ItemType Directory -Force -Path `
             'cache/tmp', `
-            'cache/vcpkg-binaries', `
-            'downloads/vcpkg', `
             'logs' | Out-Null
 
           java -version
@@ -159,76 +220,6 @@ jobs:
 
           Write-Host "ANDROID_HOME=$env:ANDROID_HOME"
           Write-Host "ANDROID_NDK_HOME=$ndk"
-
-      - name: Set up vcpkg
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $root = $env:GITHUB_WORKSPACE
-          $vcpkgRoot = Join-Path $root 'toolchains\vcpkg'
-
-          if (Test-Path $vcpkgRoot) {
-            Remove-Item -LiteralPath $vcpkgRoot -Recurse -Force
-          }
-
-          New-Item -ItemType Directory -Force `
-            -Path (Split-Path $vcpkgRoot -Parent) | Out-Null
-
-          git clone https://github.com/microsoft/vcpkg.git $vcpkgRoot
-
-          if ($LASTEXITCODE -ne 0) {
-            throw "Failed to clone vcpkg."
-          }
-
-          $openxrPort = Join-Path $vcpkgRoot 'ports\openxr-loader'
-
-          if (-not (Test-Path $openxrPort)) {
-            throw "Fresh vcpkg checkout is missing ports/openxr-loader."
-          }
-
-          $vcpkgExe = Join-Path $vcpkgRoot 'vcpkg.exe'
-
-          & (Join-Path $vcpkgRoot 'bootstrap-vcpkg.bat') -disableMetrics
-
-          if ($LASTEXITCODE -ne 0) {
-            throw "Failed to bootstrap vcpkg."
-          }
-
-          "VCPKG_ROOT=$vcpkgRoot" >> $env:GITHUB_ENV
-          "VCPKG_DOWNLOADS=$root/downloads/vcpkg" >> $env:GITHUB_ENV
-          "VCPKG_DEFAULT_BINARY_CACHE=$root/cache/vcpkg-binaries" >> $env:GITHUB_ENV
-          "VCPKG_DISABLE_METRICS=1" >> $env:GITHUB_ENV
-          "VCPKG_MAX_CONCURRENCY=8" >> $env:GITHUB_ENV
-
-          & $vcpkgExe version
-
-          if ($LASTEXITCODE -ne 0) {
-            throw "vcpkg verification failed."
-          }
-
-      - name: Install OpenXR
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $vcpkg = Join-Path $env:VCPKG_ROOT 'vcpkg.exe'
-
-          & $vcpkg install openxr-loader:x64-windows-static
-
-          if ($LASTEXITCODE -ne 0) {
-            throw "OpenXR dependency installation failed."
-          }
-
-          $openxrConfig = Get-ChildItem `
-            -Path (Join-Path $env:VCPKG_ROOT 'installed\x64-windows-static\share') `
-            -Filter 'OpenXRConfig.cmake' `
-            -Recurse -File |
-            Select-Object -First 1
-
-          if (-not $openxrConfig) {
-            throw "OpenXR CMake config was not installed."
-          }
-
-          Write-Host "Found OpenXR config: $($openxrConfig.FullName)"
 
       - name: Skip unavailable optional test source
         shell: pwsh
@@ -281,22 +272,14 @@ jobs:
             Write-Host "Optional test source exists or runtime CMake file is absent."
           }
 
-      - name: Build Windows VR support archive
+      - name: Verify 2ship.o2r archive
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
+          $archive = Join-Path $env:GITHUB_WORKSPACE 'run\vr-first-person\2ship.o2r'
 
-          & ./tools/build-vr-first-person.ps1 -Step All
-
-          if ($LASTEXITCODE -ne 0) {
-            throw "Windows VR support build failed."
-          }
-
-          $archive = Join-Path $env:GITHUB_WORKSPACE `
-            'run\vr-first-person\2ship.o2r'
-
-          if (-not (Test-Path $archive)) {
-            throw "Support archive was not generated: $archive"
+          if (!(Test-Path $archive)) {
+            throw "Support archive was not downloaded: $archive"
           }
 
           python -c "import sys,zipfile; z=zipfile.ZipFile(sys.argv[1]); bad=z.testzip(); print('Archive entries:',len(z.namelist())); sys.exit(1 if bad else 0)" "$archive"
@@ -341,7 +324,7 @@ jobs:
           $apk = Join-Path $env:GITHUB_WORKSPACE `
             'releases\quest-preview\MMVR-Quest-preview.apk'
 
-          if (-not (Test-Path $apk)) {
+          if (!(Test-Path $apk)) {
             throw "Expected APK was not generated: $apk"
           }
 
@@ -351,7 +334,7 @@ jobs:
             -File |
             Select-Object -First 1
 
-          if (-not $apksigner) {
+          if (!-not $apksigner) {
             throw "Android apksigner was not found."
           }
 
