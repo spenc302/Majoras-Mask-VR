@@ -14,6 +14,8 @@
 #include <android/log.h>
 #endif
 
+extern "C" void MMVR_MarkRestartInProgress();
+
 bool MMVR_RequestStateRestart(std::string& error) {
     error.clear();
     try {
@@ -55,7 +57,6 @@ bool MMVR_RequestStateRestart(std::string& error) {
 #ifdef __ANDROID__
         __android_log_print(ANDROID_LOG_INFO, "MMVR-Lifecycle", "[MMVR-Lifecycle] Requesting native window close");
 #endif
-        extern "C" void MMVR_MarkRestartInProgress();
         MMVR_MarkRestartInProgress();
         context->GetWindow()->Close();
         return true;
