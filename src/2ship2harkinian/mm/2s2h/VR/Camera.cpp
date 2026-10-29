@@ -238,6 +238,9 @@ mmvr::CameraFrame Update(const mmvr::TrackingFrame& rawTracking) {
     result.trackingTime = tracking.timeSeconds;
     auto* play = gPlayState;
     Player* p = play ? GET_PLAYER(play) : nullptr;
+    if (play) {
+        MMVR_PollFormReset(play);
+    }
 #if defined(MMVR_STATE_NATIVE_BACKEND)
     if (stateTrackingPending) return result;
 #endif
@@ -933,12 +936,37 @@ extern "C" void MMVR_IntroTestPrepareSave() {
         mmvr::GetSettings().Set(mmvr::Setting::DebugRoomSpawn,0);
     }
 }
+static bool pendingFormReset = false;
+static int formResetRetries = 0;
+
+extern "C" void MMVR_ScheduleFormReset() {
+    pendingFormReset = true;
+    formResetRetries = 0;
+    __android_log_print(ANDROID_LOG_INFO, "MMVR-Lifecycle", "[MMVR-Lifecycle] Form reset scheduled after save restore commit");
+}
+
+extern "C" void MMVR_PollFormReset(PlayState* play) {
+    if (!pendingFormReset || !play) return;
+    Player* player = GET_PLAYER(play);
+    if (!player) return;
+    if (MMVR_BeginFormReload(play, player)) {
+        pendingFormReset = false;
+        __android_log_print(ANDROID_LOG_INFO, "MMVR-Lifecycle", "[MMVR-Lifecycle] Deferred form reset executed successfully");
+    } else {
+        ++formResetRetries;
+        if (formResetRetries % 60 == 0) {
+            __android_log_print(ANDROID_LOG_INFO, "MMVR-Lifecycle", "[MMVR-Lifecycle] Deferred form reset pending preconditions, retry count: %d", formResetRetries);
+        }
+    }
+}
+
 extern "C" int MMVR_FormReloadActive(PlayState* play) {
     return play && play == gPlayState && formReloadOwner == GET_PLAYER(play) && formReloadScene == play->sceneId;
 }
-extern "C" void MMVR_BeginFormReload(PlayState* play, Player* p) {
+
+extern "C" bool MMVR_BeginFormReload(PlayState* play, Player* p) {
     if (!play || !p || !mmvr::FirstPersonRequested() || owner != p || scene != play->sceneId ||
-        !lastViewPose.m[3][3] || mmvrgame::SceneView(play) != mmvr::SceneView::Player) return;
+        !lastViewPose.m[3][3] || mmvrgame::SceneView(play) != mmvr::SceneView::Player) return false;
     formReloadOwner = p;
     formReloadScene = play->sceneId;
     formCameraSettling = .3f;
@@ -946,6 +974,7 @@ extern "C" void MMVR_BeginFormReload(PlayState* play, Player* p) {
     mmvr::SetPlayerMatrixRange(nullptr, nullptr, nullptr, nullptr);
     mmvr::ResetFormEffectMatrices();
     FrameInterpolation_ResetHistory();
+    return true;
 }
 extern "C" void MMVR_CameraSaveLoaded() {
     const bool debugSpawn = mmvr::PrivateDebugTools && gSaveContext.fileNum == 2 &&

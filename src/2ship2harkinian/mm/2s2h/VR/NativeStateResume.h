@@ -2,6 +2,9 @@
 #if defined(MMVR_ENABLE) && defined(MMVR_STATE_NATIVE_BACKEND)
 #include "NativeStatePendingRestore.h"
 #include "NativeStateBackend.h"
+#include "Holster.h"
+#include "HandGeometry.h"
+#include "Camera.h"
 #include "ui.h"
 extern "C" {
 #include "global.h"
@@ -130,6 +133,10 @@ inline void PollPendingStateResume() {
         LoadExactNativeState(1,pending->directory);
         committed=true;
         bootstrap=false;
+        mmvrgame::ClearHolster();
+        mmvrgame::ResetHandGeometry();
+        MMVR_CameraSaveLoaded();
+        MMVR_ScheduleFormReset();
         status="Loaded state slot "+std::to_string(slot)+" with its saved settings and packs.";
         try {CVarSave();if(!Ship::Context::GetRawInstance()->GetConfig()->LastSaveSucceeded())
             status+=" Settings are active, but could not be saved to disk.";}
