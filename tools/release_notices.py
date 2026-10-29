@@ -19,9 +19,13 @@ def notices():
         for path in sorted(base.iterdir()):
             if path.is_file() and path.name.upper().startswith(("LICENSE", "LICENCE", "COPYING", "NOTICE", "COPYRIGHT")):
                 add("quest-" + base.name[:-4], path)
-    for base in sorted((ROOT / "toolchains/vcpkg/installed/x64-windows-static/share").iterdir()):
-        if base.is_dir():
-            add("windows-" + base.name, base / "copyright")
+    vcpkg_share = ROOT / "toolchains/vcpkg/installed/x64-windows-static/share"
+    if vcpkg_share.is_dir():
+        for base in sorted(vcpkg_share.iterdir()):
+            if base.is_dir():
+                add("windows-" + base.name, base / "copyright")
+    else:
+        print("Windows vcpkg notice directory absent; skipping Windows-only notices.")
     for path in sorted((ROOT / "docs/releases/licenses/fonts").glob("*-OFL.txt")):
         add("fonts", path)
     stb = (ROOT / "build/android-quest/_deps/stb/stb_image.h").read_text(encoding="utf-8")
