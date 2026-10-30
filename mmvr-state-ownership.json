@@ -1,0 +1,151 @@
+{
+  "actorLayouts": 576,
+  "actors": [
+    {
+      "described": true,
+      "id": 0
+    },
+    {
+      "described": true,
+      "id": 179
+    },
+    {
+      "described": true,
+      "id": 179
+    },
+    {
+      "described": true,
+      "id": 144
+    },
+    {
+      "described": true,
+      "id": 144
+    },
+    {
+      "described": true,
+      "id": 144
+    },
+    {
+      "described": true,
+      "id": 144
+    },
+    {
+      "described": true,
+      "id": 144
+    },
+    {
+      "described": true,
+      "id": 144
+    },
+    {
+      "described": true,
+      "id": 144
+    },
+    {
+      "described": true,
+      "id": 144
+    },
+    {
+      "described": true,
+      "id": 144
+    },
+    {
+      "described": true,
+      "id": 144
+    },
+    {
+      "described": true,
+      "id": 144
+    },
+    {
+      "described": true,
+      "id": 144
+    },
+    {
+      "described": true,
+      "id": 144
+    },
+    {
+      "described": true,
+      "id": 144
+    },
+    {
+      "described": true,
+      "id": 144
+    },
+    {
+      "described": true,
+      "id": 144
+    },
+    {
+      "described": true,
+      "id": 144
+    },
+    {
+      "described": true,
+      "id": 144
+    },
+    {
+      "described": true,
+      "id": 144
+    },
+    {
+      "described": true,
+      "id": 144
+    },
+    {
+      "described": true,
+      "id": 144
+    },
+    {
+      "described": true,
+      "id": 144
+    },
+    {
+      "described": true,
+      "id": 144
+    },
+    {
+      "described": true,
+      "id": 144
+    },
+    {
+      "described": true,
+      "id": 73
+    },
+    {
+      "described": true,
+      "id": 24
+    }
+  ],
+  "allocatorNodes": 38,
+  "archiveReload": false,
+  "completeWorldRestore": false,
+  "constantPointers": 7313,
+  "dynamicChildElements": 89,
+  "functionPointers": 3926,
+  "gameAllocationHeaders": 2,
+  "globalRegions": 7738,
+  "identity": {
+    "abi": "android-arm64/64-le",
+    "assets": "831440b83f96ec49c0bb7a057dcfeb7968a56fd00e7bba02317469496c0af2be",
+    "build": "native-portable-v1/13c915f0ab1422130858cefad7b109755ffe8b7c069dc3fb86fd1122d9758fda"
+  },
+  "missingUnionPolicies": [
+    "PlayState.transitionCtx.instanceData"
+  ],
+  "nativeCandidateGraph": false,
+  "nullPointers": 713073,
+  "ownedPointers": 6463,
+  "pointerFields": 730842,
+  "readOnlyOwnerCorrections": 0,
+  "resourceOwners": 1869,
+  "sentinelPointers": 66,
+  "timings": {
+    "censusMs": 248.317264
+  },
+  "transientPointers": 1,
+  "unownedFields": {},
+  "unresolvedData": {},
+  "unresolvedFunctions": {}
+}

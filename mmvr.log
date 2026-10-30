@@ -1,0 +1,417 @@
+Human first-person selected
+VR renderer bridge active (Android GLES)
+=== MMVR runtime start ===
+MMVR session=26286-1793295111077
+GLES transfer self-test passed: exact RGBA, alpha and vertical orientation
+Runtime: Oculus
+Headset: Oculus Quest2 vendor=10291
+Headset recommended eye target: 1440x1584
+Controller binding: /interaction_profiles/oculus/touch_controller result=0
+Controller binding: /interaction_profiles/valve/index_controller result=0
+Controller binding: /interaction_profiles/htc/vive_controller result=0
+Controller binding: /interaction_profiles/microsoft/motion_controller result=0
+Controller binding: /interaction_profiles/facebook/touch_controller_pro result=0
+Controller binding: /interaction_profiles/meta/touch_controller_plus result=0
+Device: Oculus / Oculus Quest2 / Display Hz: not exposed; app cadence Hz: 0
+OpenXR controls attached; F7 stereo; F8/controller or System menu recenter; runtime cadence controls interpolation
+Device: Oculus / Oculus Quest2 / Display Hz: 90.000000; app cadence Hz: 0
+Session state=1
+Session state=2
+Supported display Hz: 60.000000
+Supported display Hz: 72.000000
+Supported display Hz: 80.000000
+Supported display Hz: 90.000000
+Supported display Hz: 120.000000
+Display refresh request=90.000000 result=0 capFps=90
+Device: Oculus / Oculus Quest2 / Display Hz: 90.000000; app cadence Hz: 0
+Standalone sustained performance domain=1 result=0
+Standalone sustained performance domain=2 result=0
+Device: Oculus / Oculus Quest2 / Display Hz: 90.000000; app cadence Hz: 90
+Screen recentered: level, 3m away, 3.6m wide
+Theater texture 3664x1920
+Quest menu framebuffer sample alpha=255
+Session state=3
+Session state=4
+Session state=5
+Supported display Hz: 60.000000
+Supported display Hz: 72.000000
+Supported display Hz: 80.000000
+Supported display Hz: 90.000000
+Supported display Hz: 120.000000
+Display refresh request=90.000000 result=0 capFps=90
+Device: Oculus / Oculus Quest2 / Display Hz: 90.000000; app cadence Hz: 90
+Standalone sustained performance domain=1 result=0
+Standalone sustained performance domain=2 result=0
+Left controller: /interaction_profiles/oculus/touch_controller
+Right controller: /interaction_profiles/oculus/touch_controller
+Device: Oculus / Oculus Quest2 / Display Hz: 90.000000; app cadence Hz: 90
+Screen recentered: level, 3m away, 3.6m wide
+Theater texture 1920x1080
+XR frames=369 runtimePeriodMs=11.114230 rendering=1 stereo=0 firstPerson=0 focused=1 runtimeCadenceHz=90 capFps=90 targetHz=90 submitHz=73.769315
+XR CPU submission intervals: meanMs=11.275271 p95Ms=13.686980 maxMs=42.855941 samples=367; compositor presentation timing is separate
+App work (includes driver calls): meanMs=2.914491 p95Ms=5.441095 overBudget=3/368 maxMs=70.906569 over2xBudget=2 over50Ms=1
+XR stage CPU means: tracking=0.000000 eyes=0.000000 hud=0.000000 ui=0.724122 submit=0.224952
+XR eye CPU tail: p95Ms=0.000000 maxMs=0.000000 samples=0
+XR multiview: paired=0 perEye=0 overlappingFallbackReasons: setting=0 disabled=0 retry=0 nativeFramebuffer=0 pause=0 ocarina=0 motionBlur=0 reveal=0 lensOrViewfinder=0 diagnostics=0 msaa=0 targetPrepare=0 drawFallback=0
+XR frames=819 runtimePeriodMs=11.114371 rendering=1 stereo=0 firstPerson=0 focused=1 runtimeCadenceHz=90 capFps=90 targetHz=90 submitHz=89.803891
+XR CPU submission intervals: meanMs=11.135375 p95Ms=11.546356 maxMs=12.164533 samples=450; compositor presentation timing is separate
+App work (includes driver calls): meanMs=1.905038 p95Ms=2.658335 overBudget=0/450 maxMs=2.923282 over2xBudget=0 over50Ms=0
+XR stage CPU means: tracking=0.000000 eyes=0.000000 hud=0.000000 ui=0.608775 submit=0.202249
+XR eye CPU tail: p95Ms=0.000000 maxMs=0.000000 samples=0
+XR multiview: paired=0 perEye=0 overlappingFallbackReasons: setting=0 disabled=0 retry=0 nativeFramebuffer=0 pause=0 ocarina=0 motionBlur=0 reveal=0 lensOrViewfinder=0 diagnostics=0 msaa=0 targetPrepare=0 drawFallback=0
+XR frames=1268 runtimePeriodMs=11.114336 rendering=1 stereo=0 firstPerson=0 focused=1 runtimeCadenceHz=90 capFps=90 targetHz=90 submitHz=89.787054
+XR CPU submission intervals: meanMs=11.137463 p95Ms=11.579793 maxMs=12.044272 samples=449; compositor presentation timing is separate
+App work (includes driver calls): meanMs=1.868221 p95Ms=2.666198 overBudget=0/449 maxMs=2.990104 over2xBudget=0 over50Ms=0
+XR stage CPU means: tracking=0.000000 eyes=0.000000 hud=0.000000 ui=0.589221 submit=0.201725
+XR eye CPU tail: p95Ms=0.000000 maxMs=0.000000 samples=0
+XR multiview: paired=0 perEye=0 overlappingFallbackReasons: setting=0 disabled=0 retry=0 nativeFramebuffer=0 pause=0 ocarina=0 motionBlur=0 reveal=0 lensOrViewfinder=0 diagnostics=0 msaa=0 targetPrepare=0 drawFallback=0
+XR frames=1717 runtimePeriodMs=11.114432 rendering=1 stereo=0 firstPerson=0 focused=1 runtimeCadenceHz=90 capFps=90 targetHz=90 submitHz=89.790125
+XR CPU submission intervals: meanMs=11.137082 p95Ms=11.665001 maxMs=12.048074 samples=449; compositor presentation timing is separate
+App work (includes driver calls): meanMs=1.909040 p95Ms=2.660573 overBudget=0/449 maxMs=3.153125 over2xBudget=0 over50Ms=0
+XR stage CPU means: tracking=0.000000 eyes=0.000000 hud=0.000000 ui=0.634671 submit=0.211820
+XR eye CPU tail: p95Ms=0.000000 maxMs=0.000000 samples=0
+XR multiview: paired=0 perEye=0 overlappingFallbackReasons: setting=0 disabled=0 retry=0 nativeFramebuffer=0 pause=0 ocarina=0 motionBlur=0 reveal=0 lensOrViewfinder=0 diagnostics=0 msaa=0 targetPrepare=0 drawFallback=0
+XR frames=2166 runtimePeriodMs=11.114247 rendering=1 stereo=0 firstPerson=0 focused=1 runtimeCadenceHz=90 capFps=90 targetHz=90 submitHz=89.788342
+XR CPU submission intervals: meanMs=11.137303 p95Ms=11.509637 maxMs=11.825835 samples=449; compositor presentation timing is separate
+App work (includes driver calls): meanMs=1.891311 p95Ms=2.617917 overBudget=0/449 maxMs=3.179115 over2xBudget=0 over50Ms=0
+XR stage CPU means: tracking=0.000000 eyes=0.000000 hud=0.000000 ui=0.610387 submit=0.207263
+XR eye CPU tail: p95Ms=0.000000 maxMs=0.000000 samples=0
+XR multiview: paired=0 perEye=0 overlappingFallbackReasons: setting=0 disabled=0 retry=0 nativeFramebuffer=0 pause=0 ocarina=0 motionBlur=0 reveal=0 lensOrViewfinder=0 diagnostics=0 msaa=0 targetPrepare=0 drawFallback=0
+XR frames=2615 runtimePeriodMs=11.114134 rendering=1 stereo=0 firstPerson=0 focused=1 runtimeCadenceHz=90 capFps=90 targetHz=90 submitHz=89.792933
+XR CPU submission intervals: meanMs=11.136734 p95Ms=11.569168 maxMs=12.198022 samples=449; compositor presentation timing is separate
+App work (includes driver calls): meanMs=1.851885 p95Ms=2.603541 overBudget=0/449 maxMs=2.791563 over2xBudget=0 over50Ms=0
+XR stage CPU means: tracking=0.000000 eyes=0.000000 hud=0.000000 ui=0.595972 submit=0.201254
+XR eye CPU tail: p95Ms=0.000000 maxMs=0.000000 samples=0
+XR multiview: paired=0 perEye=0 overlappingFallbackReasons: setting=0 disabled=0 retry=0 nativeFramebuffer=0 pause=0 ocarina=0 motionBlur=0 reveal=0 lensOrViewfinder=0 diagnostics=0 msaa=0 targetPrepare=0 drawFallback=0
+XR frames=3064 runtimePeriodMs=11.114214 rendering=1 stereo=0 firstPerson=0 focused=1 runtimeCadenceHz=90 capFps=90 targetHz=90 submitHz=89.789740
+XR CPU submission intervals: meanMs=11.137130 p95Ms=11.524063 maxMs=11.770678 samples=449; compositor presentation timing is separate
+App work (includes driver calls): meanMs=1.889070 p95Ms=2.609845 overBudget=0/449 maxMs=2.899844 over2xBudget=0 over50Ms=0
+XR stage CPU means: tracking=0.000000 eyes=0.000000 hud=0.000000 ui=0.613076 submit=0.205003
+XR eye CPU tail: p95Ms=0.000000 maxMs=0.000000 samples=0
+XR multiview: paired=0 perEye=0 overlappingFallbackReasons: setting=0 disabled=0 retry=0 nativeFramebuffer=0 pause=0 ocarina=0 motionBlur=0 reveal=0 lensOrViewfinder=0 diagnostics=0 msaa=0 targetPrepare=0 drawFallback=0
+XR frames=3513 runtimePeriodMs=11.114384 rendering=1 stereo=0 firstPerson=0 focused=1 runtimeCadenceHz=90 capFps=90 targetHz=90 submitHz=89.784755
+XR CPU submission intervals: meanMs=11.137748 p95Ms=11.564063 maxMs=11.982969 samples=449; compositor presentation timing is separate
+App work (includes driver calls): meanMs=1.806286 p95Ms=2.607552 overBudget=0/449 maxMs=6.132656 over2xBudget=0 over50Ms=0
+XR stage CPU means: tracking=0.000000 eyes=0.000000 hud=0.000000 ui=0.602987 submit=0.193318
+XR eye CPU tail: p95Ms=0.000000 maxMs=0.000000 samples=0
+XR multiview: paired=0 perEye=0 overlappingFallbackReasons: setting=0 disabled=0 retry=0 nativeFramebuffer=0 pause=0 ocarina=0 motionBlur=0 reveal=0 lensOrViewfinder=0 diagnostics=0 msaa=0 targetPrepare=0 drawFallback=0
+XR frames=3962 runtimePeriodMs=11.114400 rendering=1 stereo=0 firstPerson=0 focused=1 runtimeCadenceHz=90 capFps=90 targetHz=90 submitHz=89.793047
+XR CPU submission intervals: meanMs=11.136720 p95Ms=11.519168 maxMs=14.173074 samples=449; compositor presentation timing is separate
+App work (includes driver calls): meanMs=2.046193 p95Ms=2.758490 overBudget=0/449 maxMs=5.313281 over2xBudget=0 over50Ms=0
+XR stage CPU means: tracking=0.000000 eyes=0.000000 hud=0.000000 ui=0.704276 submit=0.215090
+XR eye CPU tail: p95Ms=0.000000 maxMs=0.000000 samples=0
+XR multiview: paired=0 perEye=0 overlappingFallbackReasons: setting=0 disabled=0 retry=0 nativeFramebuffer=0 pause=0 ocarina=0 motionBlur=0 reveal=0 lensOrViewfinder=0 diagnostics=0 msaa=0 targetPrepare=0 drawFallback=0
+Left controller: Not active
+Right controller: Not active
+Device: Oculus / Oculus Quest2 / Display Hz: 90.000000; app cadence Hz: 90
+Session state=4
+XR frames=4397 runtimePeriodMs=11.114465 rendering=1 stereo=0 firstPerson=0 focused=0 runtimeCadenceHz=90 capFps=90 targetHz=90 submitHz=86.850355
+XR CPU submission intervals: meanMs=11.133318 p95Ms=11.562709 maxMs=13.284116 samples=339; compositor presentation timing is separate
+App work (includes driver calls): meanMs=2.074258 p95Ms=2.850833 overBudget=0/339 maxMs=3.494637 over2xBudget=0 over50Ms=0
+XR stage CPU means: tracking=0.000000 eyes=0.000000 hud=0.000000 ui=0.722098 submit=0.216195
+XR eye CPU tail: p95Ms=0.000000 maxMs=0.000000 samples=0
+XR multiview: paired=0 perEye=0 overlappingFallbackReasons: setting=0 disabled=0 retry=0 nativeFramebuffer=0 pause=0 ocarina=0 motionBlur=0 reveal=0 lensOrViewfinder=0 diagnostics=0 msaa=0 targetPrepare=0 drawFallback=0
+Session state=5
+Supported display Hz: 60.000000
+Supported display Hz: 72.000000
+Supported display Hz: 80.000000
+Supported display Hz: 90.000000
+Supported display Hz: 120.000000
+Display refresh request=90.000000 result=0 capFps=90
+Device: Oculus / Oculus Quest2 / Display Hz: 90.000000; app cadence Hz: 90
+Standalone sustained performance domain=1 result=0
+Standalone sustained performance domain=2 result=0
+Left controller: /interaction_profiles/oculus/touch_controller
+Right controller: /interaction_profiles/oculus/touch_controller
+Device: Oculus / Oculus Quest2 / Display Hz: 90.000000; app cadence Hz: 90
+XR frames=4846 runtimePeriodMs=11.114188 rendering=1 stereo=0 firstPerson=0 focused=1 runtimeCadenceHz=90 capFps=90 targetHz=90 submitHz=89.776941
+XR CPU submission intervals: meanMs=11.124584 p95Ms=11.898543 maxMs=19.237866 samples=267; compositor presentation timing is separate
+App work (includes driver calls): meanMs=2.768576 p95Ms=4.086668 overBudget=0/268 maxMs=10.735833 over2xBudget=0 over50Ms=0
+XR stage CPU means: tracking=0.000000 eyes=0.000000 hud=0.000000 ui=0.711342 submit=0.243882
+XR eye CPU tail: p95Ms=0.000000 maxMs=0.000000 samples=0
+XR multiview: paired=0 perEye=0 overlappingFallbackReasons: setting=0 disabled=0 retry=0 nativeFramebuffer=0 pause=0 ocarina=0 motionBlur=0 reveal=0 lensOrViewfinder=0 diagnostics=0 msaa=0 targetPrepare=0 drawFallback=0
+XR frames=5295 runtimePeriodMs=11.114455 rendering=1 stereo=0 firstPerson=0 focused=1 runtimeCadenceHz=90 capFps=90 targetHz=90 submitHz=89.750187
+XR CPU submission intervals: meanMs=11.142038 p95Ms=11.826980 maxMs=18.481252 samples=449; compositor presentation timing is separate
+App work (includes driver calls): meanMs=2.991262 p95Ms=4.017500 overBudget=0/449 maxMs=10.838075 over2xBudget=0 over50Ms=0
+XR stage CPU means: tracking=0.000000 eyes=0.000000 hud=0.000000 ui=0.875421 submit=0.247518
+XR eye CPU tail: p95Ms=0.000000 maxMs=0.000000 samples=0
+XR multiview: paired=0 perEye=0 overlappingFallbackReasons: setting=0 disabled=0 retry=0 nativeFramebuffer=0 pause=0 ocarina=0 motionBlur=0 reveal=0 lensOrViewfinder=0 diagnostics=0 msaa=0 targetPrepare=0 drawFallback=0
+XR frames=5744 runtimePeriodMs=11.114347 rendering=1 stereo=0 firstPerson=0 focused=1 runtimeCadenceHz=90 capFps=90 targetHz=90 submitHz=89.786120
+XR CPU submission intervals: meanMs=11.137579 p95Ms=11.793491 maxMs=12.422345 samples=449; compositor presentation timing is separate
+App work (includes driver calls): meanMs=2.970376 p95Ms=4.004064 overBudget=0/449 maxMs=4.662969 over2xBudget=0 over50Ms=0
+XR stage CPU means: tracking=0.000000 eyes=0.000000 hud=0.000000 ui=0.885694 submit=0.242805
+XR eye CPU tail: p95Ms=0.000000 maxMs=0.000000 samples=0
+XR multiview: paired=0 perEye=0 overlappingFallbackReasons: setting=0 disabled=0 retry=0 nativeFramebuffer=0 pause=0 ocarina=0 motionBlur=0 reveal=0 lensOrViewfinder=0 diagnostics=0 msaa=0 targetPrepare=0 drawFallback=0
+XR frames=6193 runtimePeriodMs=11.114179 rendering=1 stereo=0 firstPerson=0 focused=1 runtimeCadenceHz=90 capFps=90 targetHz=90 submitHz=89.786784
+XR CPU submission intervals: meanMs=11.137497 p95Ms=11.743595 maxMs=12.799324 samples=449; compositor presentation timing is separate
+App work (includes driver calls): meanMs=2.822140 p95Ms=3.852031 overBudget=0/449 maxMs=4.533543 over2xBudget=0 over50Ms=0
+XR stage CPU means: tracking=0.000000 eyes=0.000000 hud=0.000000 ui=0.820890 submit=0.231796
+XR eye CPU tail: p95Ms=0.000000 maxMs=0.000000 samples=0
+XR multiview: paired=0 perEye=0 overlappingFallbackReasons: setting=0 disabled=0 retry=0 nativeFramebuffer=0 pause=0 ocarina=0 motionBlur=0 reveal=0 lensOrViewfinder=0 diagnostics=0 msaa=0 targetPrepare=0 drawFallback=0
+XR frames=6643 runtimePeriodMs=11.114375 rendering=1 stereo=0 firstPerson=0 focused=1 runtimeCadenceHz=90 capFps=90 targetHz=90 submitHz=89.806623
+XR CPU submission intervals: meanMs=11.135036 p95Ms=11.722033 maxMs=12.332189 samples=450; compositor presentation timing is separate
+App work (includes driver calls): meanMs=2.843160 p95Ms=3.831772 overBudget=0/450 maxMs=4.349167 over2xBudget=0 over50Ms=0
+XR stage CPU means: tracking=0.000000 eyes=0.000000 hud=0.000000 ui=0.825478 submit=0.234193
+XR eye CPU tail: p95Ms=0.000000 maxMs=0.000000 samples=0
+XR multiview: paired=0 perEye=0 overlappingFallbackReasons: setting=0 disabled=0 retry=0 nativeFramebuffer=0 pause=0 ocarina=0 motionBlur=0 reveal=0 lensOrViewfinder=0 diagnostics=0 msaa=0 targetPrepare=0 drawFallback=0
+XR frames=7092 runtimePeriodMs=11.114185 rendering=1 stereo=0 firstPerson=0 focused=1 runtimeCadenceHz=90 capFps=90 targetHz=90 submitHz=89.786558
+XR CPU submission intervals: meanMs=11.137525 p95Ms=11.777606 maxMs=12.482917 samples=449; compositor presentation timing is separate
+App work (includes driver calls): meanMs=2.847118 p95Ms=3.833386 overBudget=0/449 maxMs=5.133543 over2xBudget=0 over50Ms=0
+XR stage CPU means: tracking=0.000000 eyes=0.000000 hud=0.000000 ui=0.835130 submit=0.232907
+XR eye CPU tail: p95Ms=0.000000 maxMs=0.000000 samples=0
+XR multiview: paired=0 perEye=0 overlappingFallbackReasons: setting=0 disabled=0 retry=0 nativeFramebuffer=0 pause=0 ocarina=0 motionBlur=0 reveal=0 lensOrViewfinder=0 diagnostics=0 msaa=0 targetPrepare=0 drawFallback=0
+XR frames=7541 runtimePeriodMs=11.114433 rendering=1 stereo=0 firstPerson=0 focused=1 runtimeCadenceHz=90 capFps=90 targetHz=90 submitHz=89.795816
+XR CPU submission intervals: meanMs=11.136376 p95Ms=11.714532 maxMs=12.191460 samples=449; compositor presentation timing is separate
+App work (includes driver calls): meanMs=2.819707 p95Ms=3.772032 overBudget=0/449 maxMs=4.158906 over2xBudget=0 over50Ms=0
+XR stage CPU means: tracking=0.000000 eyes=0.000000 hud=0.000000 ui=0.819855 submit=0.231017
+XR eye CPU tail: p95Ms=0.000000 maxMs=0.000000 samples=0
+XR multiview: paired=0 perEye=0 overlappingFallbackReasons: setting=0 disabled=0 retry=0 nativeFramebuffer=0 pause=0 ocarina=0 motionBlur=0 reveal=0 lensOrViewfinder=0 diagnostics=0 msaa=0 targetPrepare=0 drawFallback=0
+XR frames=7990 runtimePeriodMs=11.114343 rendering=1 stereo=0 firstPerson=0 focused=1 runtimeCadenceHz=90 capFps=90 targetHz=90 submitHz=89.791117
+XR CPU submission intervals: meanMs=11.136959 p95Ms=11.747657 maxMs=12.249116 samples=449; compositor presentation timing is separate
+App work (includes driver calls): meanMs=2.831298 p95Ms=3.810678 overBudget=0/449 maxMs=4.224271 over2xBudget=0 over50Ms=0
+XR stage CPU means: tracking=0.000000 eyes=0.000000 hud=0.000000 ui=0.829296 submit=0.231755
+XR eye CPU tail: p95Ms=0.000000 maxMs=0.000000 samples=0
+XR multiview: paired=0 perEye=0 overlappingFallbackReasons: setting=0 disabled=0 retry=0 nativeFramebuffer=0 pause=0 ocarina=0 motionBlur=0 reveal=0 lensOrViewfinder=0 diagnostics=0 msaa=0 targetPrepare=0 drawFallback=0
+XR frames=8439 runtimePeriodMs=11.114499 rendering=1 stereo=0 firstPerson=0 focused=1 runtimeCadenceHz=90 capFps=90 targetHz=90 submitHz=89.789113
+XR CPU submission intervals: meanMs=11.137208 p95Ms=11.731928 maxMs=12.196564 samples=449; compositor presentation timing is separate
+App work (includes driver calls): meanMs=2.789527 p95Ms=3.767031 overBudget=0/449 maxMs=4.211823 over2xBudget=0 over50Ms=0
+XR stage CPU means: tracking=0.000000 eyes=0.000000 hud=0.000000 ui=0.801706 submit=0.229916
+XR eye CPU tail: p95Ms=0.000000 maxMs=0.000000 samples=0
+XR multiview: paired=0 perEye=0 overlappingFallbackReasons: setting=0 disabled=0 retry=0 nativeFramebuffer=0 pause=0 ocarina=0 motionBlur=0 reveal=0 lensOrViewfinder=0 diagnostics=0 msaa=0 targetPrepare=0 drawFallback=0
+XR frames=8888 runtimePeriodMs=11.114297 rendering=1 stereo=0 firstPerson=0 focused=1 runtimeCadenceHz=90 capFps=90 targetHz=90 submitHz=89.794313
+XR CPU submission intervals: meanMs=11.136563 p95Ms=11.979115 maxMs=14.584116 samples=449; compositor presentation timing is separate
+App work (includes driver calls): meanMs=3.189479 p95Ms=4.421302 overBudget=0/449 maxMs=6.408542 over2xBudget=0 over50Ms=0
+XR stage CPU means: tracking=0.000000 eyes=0.000000 hud=0.000000 ui=0.948146 submit=0.275340
+XR eye CPU tail: p95Ms=0.000000 maxMs=0.000000 samples=0
+XR multiview: paired=0 perEye=0 overlappingFallbackReasons: setting=0 disabled=0 retry=0 nativeFramebuffer=0 pause=0 ocarina=0 motionBlur=0 reveal=0 lensOrViewfinder=0 diagnostics=0 msaa=0 targetPrepare=0 drawFallback=0
+XR frames=9337 runtimePeriodMs=11.114351 rendering=1 stereo=0 firstPerson=0 focused=1 runtimeCadenceHz=90 capFps=90 targetHz=90 submitHz=89.790340
+XR CPU submission intervals: meanMs=11.137055 p95Ms=11.779012 maxMs=12.281460 samples=449; compositor presentation timing is separate
+App work (includes driver calls): meanMs=2.812441 p95Ms=3.846512 overBudget=0/449 maxMs=4.486615 over2xBudget=0 over50Ms=0
+XR stage CPU means: tracking=0.000000 eyes=0.000000 hud=0.000000 ui=0.817858 submit=0.228280
+XR eye CPU tail: p95Ms=0.000000 maxMs=0.000000 samples=0
+XR multiview: paired=0 perEye=0 overlappingFallbackReasons: setting=0 disabled=0 retry=0 nativeFramebuffer=0 pause=0 ocarina=0 motionBlur=0 reveal=0 lensOrViewfinder=0 diagnostics=0 msaa=0 targetPrepare=0 drawFallback=0
+XR frames=9786 runtimePeriodMs=11.114410 rendering=1 stereo=0 firstPerson=0 focused=1 runtimeCadenceHz=90 capFps=90 targetHz=90 submitHz=89.789416
+XR CPU submission intervals: meanMs=11.137170 p95Ms=11.706980 maxMs=12.239116 samples=449; compositor presentation timing is separate
+App work (includes driver calls): meanMs=2.800822 p95Ms=3.798803 overBudget=0/449 maxMs=4.241199 over2xBudget=0 over50Ms=0
+XR stage CPU means: tracking=0.000000 eyes=0.000000 hud=0.000000 ui=0.812424 submit=0.228636
+XR eye CPU tail: p95Ms=0.000000 maxMs=0.000000 samples=0
+XR multiview: paired=0 perEye=0 overlappingFallbackReasons: setting=0 disabled=0 retry=0 nativeFramebuffer=0 pause=0 ocarina=0 motionBlur=0 reveal=0 lensOrViewfinder=0 diagnostics=0 msaa=0 targetPrepare=0 drawFallback=0
+XR frames=10235 runtimePeriodMs=11.114140 rendering=1 stereo=0 firstPerson=0 focused=1 runtimeCadenceHz=90 capFps=90 targetHz=90 submitHz=89.791139
+XR CPU submission intervals: meanMs=11.136956 p95Ms=11.708022 maxMs=12.259480 samples=449; compositor presentation timing is separate
+App work (includes driver calls): meanMs=2.812604 p95Ms=3.768282 overBudget=0/449 maxMs=4.374428 over2xBudget=0 over50Ms=0
+XR stage CPU means: tracking=0.000000 eyes=0.000000 hud=0.000000 ui=0.811809 submit=0.231690
+XR eye CPU tail: p95Ms=0.000000 maxMs=0.000000 samples=0
+XR multiview: paired=0 perEye=0 overlappingFallbackReasons: setting=0 disabled=0 retry=0 nativeFramebuffer=0 pause=0 ocarina=0 motionBlur=0 reveal=0 lensOrViewfinder=0 diagnostics=0 msaa=0 targetPrepare=0 drawFallback=0
+XR frames=10684 runtimePeriodMs=11.114202 rendering=1 stereo=0 firstPerson=0 focused=1 runtimeCadenceHz=90 capFps=90 targetHz=90 submitHz=89.788979
+XR CPU submission intervals: meanMs=11.137224 p95Ms=11.751877 maxMs=12.994585 samples=449; compositor presentation timing is separate
+App work (includes driver calls): meanMs=2.815307 p95Ms=3.839272 overBudget=0/449 maxMs=4.299844 over2xBudget=0 over50Ms=0
+XR stage CPU means: tracking=0.000000 eyes=0.000000 hud=0.000000 ui=0.802742 submit=0.231247
+XR eye CPU tail: p95Ms=0.000000 maxMs=0.000000 samples=0
+XR multiview: paired=0 perEye=0 overlappingFallbackReasons: setting=0 disabled=0 retry=0 nativeFramebuffer=0 pause=0 ocarina=0 motionBlur=0 reveal=0 lensOrViewfinder=0 diagnostics=0 msaa=0 targetPrepare=0 drawFallback=0
+XR frames=11133 runtimePeriodMs=11.114292 rendering=1 stereo=0 firstPerson=0 focused=1 runtimeCadenceHz=90 capFps=90 targetHz=90 submitHz=89.799595
+XR CPU submission intervals: meanMs=11.135908 p95Ms=11.703699 maxMs=12.280105 samples=449; compositor presentation timing is separate
+App work (includes driver calls): meanMs=2.728283 p95Ms=3.706512 overBudget=0/449 maxMs=4.221459 over2xBudget=0 over50Ms=0
+XR stage CPU means: tracking=0.000000 eyes=0.000000 hud=0.000000 ui=0.733939 submit=0.229124
+XR eye CPU tail: p95Ms=0.000000 maxMs=0.000000 samples=0
+XR multiview: paired=0 perEye=0 overlappingFallbackReasons: setting=0 disabled=0 retry=0 nativeFramebuffer=0 pause=0 ocarina=0 motionBlur=0 reveal=0 lensOrViewfinder=0 diagnostics=0 msaa=0 targetPrepare=0 drawFallback=0
+XR frames=11582 runtimePeriodMs=11.114458 rendering=1 stereo=0 firstPerson=0 focused=1 runtimeCadenceHz=90 capFps=90 targetHz=90 submitHz=89.791885
+XR CPU submission intervals: meanMs=11.136864 p95Ms=11.690470 maxMs=12.401512 samples=449; compositor presentation timing is separate
+App work (includes driver calls): meanMs=2.732121 p95Ms=3.695312 overBudget=0/449 maxMs=4.969584 over2xBudget=0 over50Ms=0
+XR stage CPU means: tracking=0.000000 eyes=0.000000 hud=0.000000 ui=0.744761 submit=0.229691
+XR eye CPU tail: p95Ms=0.000000 maxMs=0.000000 samples=0
+XR multiview: paired=0 perEye=0 overlappingFallbackReasons: setting=0 disabled=0 retry=0 nativeFramebuffer=0 pause=0 ocarina=0 motionBlur=0 reveal=0 lensOrViewfinder=0 diagnostics=0 msaa=0 targetPrepare=0 drawFallback=0
+XR frames=12031 runtimePeriodMs=11.114528 rendering=1 stereo=0 firstPerson=0 focused=1 runtimeCadenceHz=90 capFps=90 targetHz=90 submitHz=89.790818
+XR CPU submission intervals: meanMs=11.136996 p95Ms=11.732032 maxMs=12.281043 samples=449; compositor presentation timing is separate
+App work (includes driver calls): meanMs=2.763114 p95Ms=3.774635 overBudget=0/449 maxMs=4.213958 over2xBudget=0 over50Ms=0
+XR stage CPU means: tracking=0.000000 eyes=0.000000 hud=0.000000 ui=0.785184 submit=0.227166
+XR eye CPU tail: p95Ms=0.000000 maxMs=0.000000 samples=0
+XR multiview: paired=0 perEye=0 overlappingFallbackReasons: setting=0 disabled=0 retry=0 nativeFramebuffer=0 pause=0 ocarina=0 motionBlur=0 reveal=0 lensOrViewfinder=0 diagnostics=0 msaa=0 targetPrepare=0 drawFallback=0
+XR frames=12480 runtimePeriodMs=11.114155 rendering=1 stereo=0 firstPerson=0 focused=1 runtimeCadenceHz=90 capFps=90 targetHz=90 submitHz=89.786564
+XR CPU submission intervals: meanMs=11.137524 p95Ms=11.752657 maxMs=12.165365 samples=449; compositor presentation timing is separate
+App work (includes driver calls): meanMs=2.817008 p95Ms=3.806354 overBudget=0/449 maxMs=4.648541 over2xBudget=0 over50Ms=0
+XR stage CPU means: tracking=0.000000 eyes=0.000000 hud=0.000000 ui=0.823545 submit=0.228909
+XR eye CPU tail: p95Ms=0.000000 maxMs=0.000000 samples=0
+XR multiview: paired=0 perEye=0 overlappingFallbackReasons: setting=0 disabled=0 retry=0 nativeFramebuffer=0 pause=0 ocarina=0 motionBlur=0 reveal=0 lensOrViewfinder=0 diagnostics=0 msaa=0 targetPrepare=0 drawFallback=0
+XR frames=12930 runtimePeriodMs=11.114159 rendering=1 stereo=0 firstPerson=0 focused=1 runtimeCadenceHz=90 capFps=90 targetHz=90 submitHz=89.791572
+XR CPU submission intervals: meanMs=11.136903 p95Ms=11.704636 maxMs=12.426043 samples=450; compositor presentation timing is separate
+App work (includes driver calls): meanMs=2.800583 p95Ms=3.760624 overBudget=0/450 maxMs=4.257709 over2xBudget=0 over50Ms=0
+XR stage CPU means: tracking=0.000000 eyes=0.000000 hud=0.000000 ui=0.810239 submit=0.229360
+XR eye CPU tail: p95Ms=0.000000 maxMs=0.000000 samples=0
+XR multiview: paired=0 perEye=0 overlappingFallbackReasons: setting=0 disabled=0 retry=0 nativeFramebuffer=0 pause=0 ocarina=0 motionBlur=0 reveal=0 lensOrViewfinder=0 diagnostics=0 msaa=0 targetPrepare=0 drawFallback=0
+XR frames=13378 runtimePeriodMs=11.114371 rendering=1 stereo=0 firstPerson=0 focused=1 runtimeCadenceHz=90 capFps=90 targetHz=90 submitHz=89.593960
+XR CPU submission intervals: meanMs=11.161467 p95Ms=11.726564 maxMs=27.529326 samples=448; compositor presentation timing is separate
+App work (includes driver calls): meanMs=2.813923 p95Ms=3.779845 overBudget=1/448 maxMs=19.449429 over2xBudget=0 over50Ms=0
+XR stage CPU means: tracking=0.000000 eyes=0.000000 hud=0.000000 ui=0.823698 submit=0.233446
+XR eye CPU tail: p95Ms=0.000000 maxMs=0.000000 samples=0
+XR multiview: paired=0 perEye=0 overlappingFallbackReasons: setting=0 disabled=0 retry=0 nativeFramebuffer=0 pause=0 ocarina=0 motionBlur=0 reveal=0 lensOrViewfinder=0 diagnostics=0 msaa=0 targetPrepare=0 drawFallback=0
+XR frames=13827 runtimePeriodMs=11.114452 rendering=1 stereo=0 firstPerson=0 focused=1 runtimeCadenceHz=90 capFps=90 targetHz=90 submitHz=89.794800
+XR CPU submission intervals: meanMs=11.136502 p95Ms=11.726824 maxMs=12.400574 samples=449; compositor presentation timing is separate
+App work (includes driver calls): meanMs=2.792029 p95Ms=3.771510 overBudget=0/449 maxMs=4.420730 over2xBudget=0 over50Ms=0
+XR stage CPU means: tracking=0.000000 eyes=0.000000 hud=0.000000 ui=0.804433 submit=0.230708
+XR eye CPU tail: p95Ms=0.000000 maxMs=0.000000 samples=0
+XR multiview: paired=0 perEye=0 overlappingFallbackReasons: setting=0 disabled=0 retry=0 nativeFramebuffer=0 pause=0 ocarina=0 motionBlur=0 reveal=0 lensOrViewfinder=0 diagnostics=0 msaa=0 targetPrepare=0 drawFallback=0
+XR frames=14276 runtimePeriodMs=11.114480 rendering=1 stereo=0 firstPerson=0 focused=1 runtimeCadenceHz=90 capFps=90 targetHz=90 submitHz=89.786635
+XR CPU submission intervals: meanMs=11.137515 p95Ms=11.746564 maxMs=13.993752 samples=449; compositor presentation timing is separate
+App work (includes driver calls): meanMs=2.950861 p95Ms=3.984325 overBudget=0/449 maxMs=4.839688 over2xBudget=0 over50Ms=0
+XR stage CPU means: tracking=0.000000 eyes=0.000000 hud=0.000000 ui=0.858196 submit=0.242790
+XR eye CPU tail: p95Ms=0.000000 maxMs=0.000000 samples=0
+XR multiview: paired=0 perEye=0 overlappingFallbackReasons: setting=0 disabled=0 retry=0 nativeFramebuffer=0 pause=0 ocarina=0 motionBlur=0 reveal=0 lensOrViewfinder=0 diagnostics=0 msaa=0 targetPrepare=0 drawFallback=0
+XR frames=14725 runtimePeriodMs=11.114507 rendering=1 stereo=0 firstPerson=0 focused=1 runtimeCadenceHz=90 capFps=90 targetHz=90 submitHz=89.792094
+XR CPU submission intervals: meanMs=11.136838 p95Ms=11.909689 maxMs=12.757553 samples=449; compositor presentation timing is separate
+App work (includes driver calls): meanMs=2.992823 p95Ms=4.144948 overBudget=0/449 maxMs=5.008698 over2xBudget=0 over50Ms=0
+XR stage CPU means: tracking=0.000000 eyes=0.000000 hud=0.000000 ui=0.874862 submit=0.250673
+XR eye CPU tail: p95Ms=0.000000 maxMs=0.000000 samples=0
+XR multiview: paired=0 perEye=0 overlappingFallbackReasons: setting=0 disabled=0 retry=0 nativeFramebuffer=0 pause=0 ocarina=0 motionBlur=0 reveal=0 lensOrViewfinder=0 diagnostics=0 msaa=0 targetPrepare=0 drawFallback=0
+XR frames=15174 runtimePeriodMs=11.114407 rendering=1 stereo=0 firstPerson=0 focused=1 runtimeCadenceHz=90 capFps=90 targetHz=90 submitHz=89.787059
+XR CPU submission intervals: meanMs=11.137462 p95Ms=11.606407 maxMs=12.273699 samples=449; compositor presentation timing is separate
+App work (includes driver calls): meanMs=2.763997 p95Ms=3.659531 overBudget=0/449 maxMs=4.189167 over2xBudget=0 over50Ms=0
+XR stage CPU means: tracking=0.000000 eyes=0.000000 hud=0.000000 ui=0.784032 submit=0.231984
+XR eye CPU tail: p95Ms=0.000000 maxMs=0.000000 samples=0
+XR multiview: paired=0 perEye=0 overlappingFallbackReasons: setting=0 disabled=0 retry=0 nativeFramebuffer=0 pause=0 ocarina=0 motionBlur=0 reveal=0 lensOrViewfinder=0 diagnostics=0 msaa=0 targetPrepare=0 drawFallback=0
+XR frames=15623 runtimePeriodMs=11.114354 rendering=1 stereo=0 firstPerson=0 focused=1 runtimeCadenceHz=90 capFps=90 targetHz=90 submitHz=89.798092
+XR CPU submission intervals: meanMs=11.136094 p95Ms=11.648334 maxMs=12.213647 samples=449; compositor presentation timing is separate
+App work (includes driver calls): meanMs=2.787377 p95Ms=3.738125 overBudget=0/449 maxMs=4.149533 over2xBudget=0 over50Ms=0
+XR stage CPU means: tracking=0.000000 eyes=0.000000 hud=0.000000 ui=0.795887 submit=0.231228
+XR eye CPU tail: p95Ms=0.000000 maxMs=0.000000 samples=0
+XR multiview: paired=0 perEye=0 overlappingFallbackReasons: setting=0 disabled=0 retry=0 nativeFramebuffer=0 pause=0 ocarina=0 motionBlur=0 reveal=0 lensOrViewfinder=0 diagnostics=0 msaa=0 targetPrepare=0 drawFallback=0
+XR frames=16072 runtimePeriodMs=11.114367 rendering=1 stereo=0 firstPerson=0 focused=1 runtimeCadenceHz=90 capFps=90 targetHz=90 submitHz=89.791645
+XR CPU submission intervals: meanMs=11.136894 p95Ms=11.685470 maxMs=12.314012 samples=449; compositor presentation timing is separate
+App work (includes driver calls): meanMs=2.787570 p95Ms=3.764843 overBudget=0/449 maxMs=5.339376 over2xBudget=0 over50Ms=0
+XR stage CPU means: tracking=0.000000 eyes=0.000000 hud=0.000000 ui=0.793294 submit=0.231126
+XR eye CPU tail: p95Ms=0.000000 maxMs=0.000000 samples=0
+XR multiview: paired=0 perEye=0 overlappingFallbackReasons: setting=0 disabled=0 retry=0 nativeFramebuffer=0 pause=0 ocarina=0 motionBlur=0 reveal=0 lensOrViewfinder=0 diagnostics=0 msaa=0 targetPrepare=0 drawFallback=0
+XR frames=16521 runtimePeriodMs=11.114374 rendering=1 stereo=0 firstPerson=0 focused=1 runtimeCadenceHz=90 capFps=90 targetHz=90 submitHz=89.789362
+XR CPU submission intervals: meanMs=11.137177 p95Ms=11.698334 maxMs=12.552657 samples=449; compositor presentation timing is separate
+App work (includes driver calls): meanMs=2.804498 p95Ms=3.815208 overBudget=0/449 maxMs=4.482240 over2xBudget=0 over50Ms=0
+XR stage CPU means: tracking=0.000000 eyes=0.000000 hud=0.000000 ui=0.812757 submit=0.233235
+XR eye CPU tail: p95Ms=0.000000 maxMs=0.000000 samples=0
+XR multiview: paired=0 perEye=0 overlappingFallbackReasons: setting=0 disabled=0 retry=0 nativeFramebuffer=0 pause=0 ocarina=0 motionBlur=0 reveal=0 lensOrViewfinder=0 diagnostics=0 msaa=0 targetPrepare=0 drawFallback=0
+Human first-person selected
+VR renderer bridge active (Android GLES)
+=== MMVR runtime start ===
+MMVR session=27249-1793295383414
+GLES transfer self-test passed: exact RGBA, alpha and vertical orientation
+Runtime: Oculus
+Headset: Oculus Quest2 vendor=10291
+Headset recommended eye target: 1440x1584
+Controller binding: /interaction_profiles/oculus/touch_controller result=0
+Controller binding: /interaction_profiles/valve/index_controller result=0
+Controller binding: /interaction_profiles/htc/vive_controller result=0
+Controller binding: /interaction_profiles/microsoft/motion_controller result=0
+Controller binding: /interaction_profiles/facebook/touch_controller_pro result=0
+Controller binding: /interaction_profiles/meta/touch_controller_plus result=0
+Device: Oculus / Oculus Quest2 / Display Hz: not exposed; app cadence Hz: 0
+OpenXR controls attached; F7 stereo; F8/controller or System menu recenter; runtime cadence controls interpolation
+Device: Oculus / Oculus Quest2 / Display Hz: 90.000000; app cadence Hz: 0
+Session state=1
+Session state=2
+Supported display Hz: 60.000000
+Supported display Hz: 72.000000
+Supported display Hz: 80.000000
+Supported display Hz: 90.000000
+Supported display Hz: 120.000000
+Display refresh request=90.000000 result=0 capFps=90
+Device: Oculus / Oculus Quest2 / Display Hz: 90.000000; app cadence Hz: 0
+Standalone sustained performance domain=1 result=0
+Standalone sustained performance domain=2 result=0
+Device: Oculus / Oculus Quest2 / Display Hz: 90.000000; app cadence Hz: 90
+Screen recentered: level, 3m away, 3.6m wide
+Theater texture 3664x1920
+Quest menu framebuffer sample alpha=255
+Session state=3
+Session state=4
+Session state=5
+Supported display Hz: 60.000000
+Supported display Hz: 72.000000
+Supported display Hz: 80.000000
+Supported display Hz: 90.000000
+Supported display Hz: 120.000000
+Display refresh request=90.000000 result=0 capFps=90
+Device: Oculus / Oculus Quest2 / Display Hz: 90.000000; app cadence Hz: 90
+Standalone sustained performance domain=1 result=0
+Standalone sustained performance domain=2 result=0
+Left controller: /interaction_profiles/oculus/touch_controller
+Right controller: /interaction_profiles/oculus/touch_controller
+Device: Oculus / Oculus Quest2 / Display Hz: 90.000000; app cadence Hz: 90
+Screen recentered: level, 3m away, 3.6m wide
+Theater texture 1920x1080
+XR frames=399 runtimePeriodMs=11.114360 rendering=1 stereo=0 firstPerson=0 focused=1 runtimeCadenceHz=90 capFps=90 targetHz=90 submitHz=79.536257
+XR CPU submission intervals: meanMs=11.468230 p95Ms=13.685157 maxMs=71.478914 samples=397; compositor presentation timing is separate
+App work (includes driver calls): meanMs=3.176930 p95Ms=4.973907 overBudget=4/398 maxMs=64.681361 over2xBudget=3 over50Ms=2
+XR stage CPU means: tracking=0.000000 eyes=0.000000 hud=0.000000 ui=0.463836 submit=0.207639
+XR eye CPU tail: p95Ms=0.000000 maxMs=0.000000 samples=0
+XR multiview: paired=0 perEye=0 overlappingFallbackReasons: setting=0 disabled=0 retry=0 nativeFramebuffer=0 pause=0 ocarina=0 motionBlur=0 reveal=0 lensOrViewfinder=0 diagnostics=0 msaa=0 targetPrepare=0 drawFallback=0
+Left controller: Not active
+Right controller: Not active
+Device: Oculus / Oculus Quest2 / Display Hz: 90.000000; app cadence Hz: 90
+Device: Oculus / Oculus Quest2 / Display Hz: 72.000000; app cadence Hz: 90
+Device: Oculus / Oculus Quest2 / Display Hz: 72.000000; app cadence Hz: 72
+Session state=4
+Session state=5
+Supported display Hz: 60.000000
+Supported display Hz: 72.000000
+Supported display Hz: 80.000000
+Supported display Hz: 90.000000
+Supported display Hz: 120.000000
+Display refresh request=90.000000 result=0 capFps=90
+Device: Oculus / Oculus Quest2 / Display Hz: 72.000000; app cadence Hz: 72
+Standalone sustained performance domain=1 result=0
+Standalone sustained performance domain=2 result=0
+Device: Oculus / Oculus Quest2 / Display Hz: 90.000000; app cadence Hz: 72
+Left controller: /interaction_profiles/oculus/touch_controller
+Right controller: /interaction_profiles/oculus/touch_controller
+Device: Oculus / Oculus Quest2 / Display Hz: 90.000000; app cadence Hz: 72
+Device: Oculus / Oculus Quest2 / Display Hz: 90.000000; app cadence Hz: 90
+XR frames=817 runtimePeriodMs=11.114319 rendering=1 stereo=0 firstPerson=0 focused=1 runtimeCadenceHz=90 capFps=90 targetHz=90 submitHz=83.417373
+XR CPU submission intervals: meanMs=11.180559 p95Ms=11.939845 maxMs=16.770731 samples=301; compositor presentation timing is separate
+App work (includes driver calls): meanMs=2.585738 p95Ms=3.627917 overBudget=0/302 maxMs=7.963856 over2xBudget=0 over50Ms=0
+XR stage CPU means: tracking=0.000000 eyes=0.000000 hud=0.000000 ui=0.547165 submit=0.207806
+XR eye CPU tail: p95Ms=0.000000 maxMs=0.000000 samples=0
+XR multiview: paired=0 perEye=0 overlappingFallbackReasons: setting=0 disabled=0 retry=0 nativeFramebuffer=0 pause=0 ocarina=0 motionBlur=0 reveal=0 lensOrViewfinder=0 diagnostics=0 msaa=0 targetPrepare=0 drawFallback=0
+XR frames=1266 runtimePeriodMs=11.114553 rendering=1 stereo=0 firstPerson=0 focused=1 runtimeCadenceHz=90 capFps=90 targetHz=90 submitHz=89.759979
+XR CPU submission intervals: meanMs=11.140823 p95Ms=11.731147 maxMs=12.391512 samples=449; compositor presentation timing is separate
+App work (includes driver calls): meanMs=2.661358 p95Ms=3.545052 overBudget=0/449 maxMs=4.403281 over2xBudget=0 over50Ms=0
+XR stage CPU means: tracking=0.000000 eyes=0.000000 hud=0.000000 ui=0.678106 submit=0.212186
+XR eye CPU tail: p95Ms=0.000000 maxMs=0.000000 samples=0
+XR multiview: paired=0 perEye=0 overlappingFallbackReasons: setting=0 disabled=0 retry=0 nativeFramebuffer=0 pause=0 ocarina=0 motionBlur=0 reveal=0 lensOrViewfinder=0 diagnostics=0 msaa=0 targetPrepare=0 drawFallback=0
+XR frames=1715 runtimePeriodMs=11.114167 rendering=1 stereo=0 firstPerson=0 focused=1 runtimeCadenceHz=90 capFps=90 targetHz=90 submitHz=89.786834
+XR CPU submission intervals: meanMs=11.137490 p95Ms=11.783908 maxMs=12.816928 samples=449; compositor presentation timing is separate
+App work (includes driver calls): meanMs=2.590269 p95Ms=3.515312 overBudget=0/449 maxMs=4.225677 over2xBudget=0 over50Ms=0
+XR stage CPU means: tracking=0.000000 eyes=0.000000 hud=0.000000 ui=0.672083 submit=0.206885
+XR eye CPU tail: p95Ms=0.000000 maxMs=0.000000 samples=0
+XR multiview: paired=0 perEye=0 overlappingFallbackReasons: setting=0 disabled=0 retry=0 nativeFramebuffer=0 pause=0 ocarina=0 motionBlur=0 reveal=0 lensOrViewfinder=0 diagnostics=0 msaa=0 targetPrepare=0 drawFallback=0
+XR frames=2165 runtimePeriodMs=11.114239 rendering=1 stereo=0 firstPerson=0 focused=1 runtimeCadenceHz=90 capFps=90 targetHz=90 submitHz=89.799593
+XR CPU submission intervals: meanMs=11.135908 p95Ms=11.737658 maxMs=19.830679 samples=450; compositor presentation timing is separate
+App work (includes driver calls): meanMs=2.622560 p95Ms=3.521979 overBudget=1/450 maxMs=11.376043 over2xBudget=0 over50Ms=0
+XR stage CPU means: tracking=0.000000 eyes=0.000000 hud=0.000000 ui=0.692656 submit=0.210572
+XR eye CPU tail: p95Ms=0.000000 maxMs=0.000000 samples=0
+XR multiview: paired=0 perEye=0 overlappingFallbackReasons: setting=0 disabled=0 retry=0 nativeFramebuffer=0 pause=0 ocarina=0 motionBlur=0 reveal=0 lensOrViewfinder=0 diagnostics=0 msaa=0 targetPrepare=0 drawFallback=0
+XR frames=2614 runtimePeriodMs=11.114318 rendering=1 stereo=0 firstPerson=0 focused=1 runtimeCadenceHz=90 capFps=90 targetHz=90 submitHz=89.777983
+XR CPU submission intervals: meanMs=11.138588 p95Ms=11.778751 maxMs=12.853647 samples=449; compositor presentation timing is separate
+App work (includes driver calls): meanMs=2.552542 p95Ms=3.543386 overBudget=0/449 maxMs=4.123906 over2xBudget=0 over50Ms=0
+XR stage CPU means: tracking=0.000000 eyes=0.000000 hud=0.000000 ui=0.686454 submit=0.212524
+XR eye CPU tail: p95Ms=0.000000 maxMs=0.000000 samples=0
+XR multiview: paired=0 perEye=0 overlappingFallbackReasons: setting=0 disabled=0 retry=0 nativeFramebuffer=0 pause=0 ocarina=0 motionBlur=0 reveal=0 lensOrViewfinder=0 diagnostics=0 msaa=0 targetPrepare=0 drawFallback=0
+XR frames=3063 runtimePeriodMs=11.114354 rendering=1 stereo=0 firstPerson=0 focused=1 runtimeCadenceHz=90 capFps=90 targetHz=90 submitHz=89.792514
+XR CPU submission intervals: meanMs=11.136786 p95Ms=11.808542 maxMs=12.204688 samples=449; compositor presentation timing is separate
+App work (includes driver calls): meanMs=2.582269 p95Ms=3.559948 overBudget=0/449 maxMs=4.266511 over2xBudget=0 over50Ms=0
+XR stage CPU means: tracking=0.000000 eyes=0.000000 hud=0.000000 ui=0.705918 submit=0.212472
+XR eye CPU tail: p95Ms=0.000000 maxMs=0.000000 samples=0
+XR multiview: paired=0 perEye=0 overlappingFallbackReasons: setting=0 disabled=0 retry=0 nativeFramebuffer=0 pause=0 ocarina=0 motionBlur=0 reveal=0 lensOrViewfinder=0 diagnostics=0 msaa=0 targetPrepare=0 drawFallback=0
+Left controller: Not active
+Right controller: Not active
+Device: Oculus / Oculus Quest2 / Display Hz: 90.000000; app cadence Hz: 90
+Device: Oculus / Oculus Quest2 / Display Hz: 72.000000; app cadence Hz: 90
+Session state=4
+Device: Oculus / Oculus Quest2 / Display Hz: 72.000000; app cadence Hz: 72
+XR frames=3468 runtimePeriodMs=13.892901 rendering=1 stereo=0 firstPerson=0 focused=0 runtimeCadenceHz=72 capFps=90 targetHz=72 submitHz=80.857649
+XR CPU submission intervals: meanMs=11.124001 p95Ms=11.626615 maxMs=12.584428 samples=221; compositor presentation timing is separate
+App work (includes driver calls): meanMs=2.652104 p95Ms=3.504948 overBudget=0/221 maxMs=4.014949 over2xBudget=0 over50Ms=0
+XR stage CPU means: tracking=0.000000 eyes=0.000000 hud=0.000000 ui=0.702061 submit=0.209621
+XR eye CPU tail: p95Ms=0.000000 maxMs=0.000000 samples=0
+XR multiview: paired=0 perEye=0 overlappingFallbackReasons: setting=0 disabled=0 retry=0 nativeFramebuffer=0 pause=0 ocarina=0 motionBlur=0 reveal=0 lensOrViewfinder=0 diagnostics=0 msaa=0 targetPrepare=0 drawFallback=0
+Session state=3
+Session state=6
+Session state=1
+Headset LOCAL recenter queued at 126239442769403
+XR shutdown complete

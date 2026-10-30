@@ -214,6 +214,18 @@ inline void VerifyResourceLifecycle() {
         firstArchive->Unload();firstArchive->Load();
         RequireResource(!firstArchive->HasFile("value.bin") && !firstArchive->LoadFile(CRC64("value.bin")),"Deleted loose pack file survived archive reload");++checks;
     }
+    {
+        Ship::ResourceManager closing;
+        closing.CacheExternalResource("before-shutdown", std::make_shared<ProbeResource>());
+        closing.StopAcceptingTasks();
+        closing.CacheExternalResource("after-shutdown", std::make_shared<ProbeResource>());
+
+        RequireResource(closing.GetCachedResource("before-shutdown", true) != nullptr,
+                        "Shutdown removed a resource that was cached before admission closed");
+        RequireResource(closing.GetCachedResource("after-shutdown", true) == nullptr,
+                        "CacheExternalResource inserted a resource after shutdown admission closed");
+        ++checks;
+    }
     std::ofstream("native-resource-lifecycle.json")<<"{\"passed\":true,\"checks\":"<<checks<<",\"concurrentCacheOperations\":6000,\"singleWorkerNestedLoad\":true}";
 }
 } // namespace mmvrtest

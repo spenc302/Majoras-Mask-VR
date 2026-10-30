@@ -4,10 +4,21 @@
 #include "ship/resource/archive/Archive.h"
 #include <algorithm>
 #include <thread>
+#include <future>
+#include <utility>
 #include "ship/utils/StringHelper.h"
 #include "ship/utils/Utils.h"
 #include "ship/config/ConsoleVariable.h"
 #include "ship/Context.h"
+
+namespace {
+template <typename T>
+std::shared_future<T> MakeReadySharedFuture(T value) {
+    std::promise<T> promise;
+    promise.set_value(std::move(value));
+    return promise.get_future().share();
+}
+}
 
 namespace Ship {
 
@@ -95,17 +106,54 @@ void ResourceManager::Init(const std::vector<std::string>& archivePaths,
     }
 }
 
+void ResourceManager::StopAcceptingTasks() {
+    const std::lock_guard<std::mutex> lock(mTaskSubmissionMutex);
+    mAcceptingTasks = false;
+}
+
 void ResourceManager::WaitForPendingLoads() {
-    if (mThreadPool) {
-        mThreadPool->wait();
+    std::shared_ptr<BS::thread_pool> threadPool;
+
+    {
+        const std::lock_guard<std::mutex> lock(mTaskSubmissionMutex);
+        threadPool = mThreadPool;
+    }
+
+    if (threadPool) {
+        threadPool->wait();
     }
 }
 
 ResourceManager::~ResourceManager() {
-    // Join workers before their mutex, cache and archive dependencies begin
-    // member destruction. Context drains jobs before removing its singleton.
+    StopAcceptingTasks();
+    WaitForPendingLoads();
+
+    // All accepted worker tasks have completed.
     mThreadPool.reset();
+
+    // Release cached resources while the loader and archive manager
+    // are still alive.
+    DrainResourceCache();
+
     SPDLOG_INFO("destruct ResourceManager");
+}
+
+void ResourceManager::DrainResourceCache() {
+    while (true) {
+        decltype(mResourceCache)::node_type removed;
+
+        {
+            const std::lock_guard<std::mutex> lock(mMutex);
+
+            if (mResourceCache.empty()) {
+                break;
+            }
+
+            removed = mResourceCache.extract(mResourceCache.begin());
+        }
+
+        // The extracted node is destroyed here, outside mMutex.
+    }
 }
 
 bool ResourceManager::IsLoaded() {
@@ -269,12 +317,16 @@ ResourceManager::LoadResourceAsync(const ResourceIdentifier& identifier, bool lo
         return LoadResourceAsync({ newFilePath, identifier.Owner, identifier.Parent }, loadExact, priority, initData);
     }
 
+    std::unique_lock<std::mutex> submissionLock(mTaskSubmissionMutex);
+
+    if (!mAcceptingTasks || !mThreadPool) {
+        return MakeReadySharedFuture<std::shared_ptr<IResource>>(nullptr);
+    }
+
     // Check the cache before queueing the job.
     auto cacheCheck = GetCachedResource(identifier, loadExact);
     if (cacheCheck) {
-        auto promise = std::make_shared<std::promise<std::shared_ptr<IResource>>>();
-        promise->set_value(cacheCheck);
-        return promise->get_future().share();
+        return MakeReadySharedFuture(std::move(cacheCheck));
     }
 
     return mThreadPool->submit_task(
@@ -302,7 +354,7 @@ std::shared_ptr<IResource> ResourceManager::LoadResource(const ResourceIdentifie
     }
     // A factory or directory job may synchronously request a dependency. Queueing
     // it back onto this pool can deadlock when every worker is waiting on itself.
-    if (BS::this_thread::get_pool() == mThreadPool.get()) {
+    if (mThreadPool && BS::this_thread::get_pool() == mThreadPool.get()) {
         return LoadResourceProcess(identifier, loadExact, initData);
     }
     auto resource = LoadResourceAsync(identifier, loadExact, BS::pr::highest, initData).get();
@@ -429,6 +481,10 @@ ResourceManager::LoadResourcesProcess(const ResourceFilter& filter) {
 
 std::shared_future<std::shared_ptr<std::vector<std::shared_ptr<IResource>>>>
 ResourceManager::LoadResourcesAsync(const ResourceFilter& filter, BS::priority_t priority) {
+    std::unique_lock<std::mutex> submissionLock(mTaskSubmissionMutex);
+    if (!mAcceptingTasks || !mThreadPool) {
+        return MakeReadySharedFuture<std::shared_ptr<std::vector<std::shared_ptr<IResource>>>>(nullptr);
+    }
     return mThreadPool->submit_task(
         [this, filter]() -> std::shared_ptr<std::vector<std::shared_ptr<IResource>>> {
             return LoadResourcesProcess(filter);
@@ -450,6 +506,10 @@ std::shared_ptr<std::vector<std::shared_ptr<IResource>>> ResourceManager::LoadRe
 }
 
 void ResourceManager::DirtyResources(const ResourceFilter& filter) {
+    std::unique_lock<std::mutex> submissionLock(mTaskSubmissionMutex);
+    if (!mAcceptingTasks || !mThreadPool) {
+        return;
+    }
     mThreadPool->submit_task([this, filter]() -> void {
         auto list = GetArchiveManager()->ListFiles(filter.IncludeMasks, filter.ExcludeMasks);
 
@@ -474,6 +534,10 @@ void ResourceManager::UnloadResourcesAsync(const std::string& searchMask, BS::pr
 }
 
 void ResourceManager::UnloadResourcesAsync(const ResourceFilter& filter, BS::priority_t priority) {
+    std::unique_lock<std::mutex> submissionLock(mTaskSubmissionMutex);
+    if (!mAcceptingTasks || !mThreadPool) {
+        return;
+    }
     mThreadPool->submit_task([this, filter]() -> void { UnloadResourcesProcess(filter); }, priority);
 }
 
@@ -524,8 +588,14 @@ size_t ResourceManager::UnloadResource(const std::string& filePath) {
 
 void ResourceManager::CacheExternalResource(const std::string& filePath, std::shared_ptr<IResource> resource) {
     decltype(mResourceCache)::mapped_type retired;
+
+    std::unique_lock<std::mutex> submissionLock(mTaskSubmissionMutex);
+    if (!mAcceptingTasks) {
+        return;
+    }
+
     {
-        const std::lock_guard<std::mutex> lock(mMutex);
+        const std::lock_guard<std::mutex> cacheLock(mMutex);
         auto& entry = mResourceCache[{ filePath, mDefaultCacheOwner, mDefaultCacheArchive }];
         retired.swap(entry);
         entry = std::move(resource);

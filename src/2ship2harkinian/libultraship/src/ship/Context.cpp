@@ -40,12 +40,17 @@ void Context::DestroyInstance() {
     // Loader callbacks resolve nested resources through this singleton. Keep
     // it valid until every queued load has finished, after game/audio stop.
     if (mContext && mContext->mResourceManager) {
+        mContext->mResourceManager->StopAcceptingTasks();
         mContext->mResourceManager->WaitForPendingLoads();
     }
     mContext = nullptr;
 }
 
 Context::~Context() {
+    if (mResourceManager) {
+        mResourceManager->StopAcceptingTasks();
+        mResourceManager->WaitForPendingLoads();
+    }
     SPDLOG_TRACE("destruct context");
     if (mWindow && mConfig) mWindow->SaveWindowToConfig();
     // Explicitly destructing everything so that logging is done last.

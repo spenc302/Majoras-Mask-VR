@@ -124,6 +124,9 @@ class ResourceManager {
               int32_t reservedThreadCount = 1);
     ~ResourceManager();
 
+    // Prevent new asynchronous resource tasks from being submitted.
+    void StopAcceptingTasks();
+
     // Called while Context, resource factories and logging are still alive.
     // The application must stop external task producers before this drain.
     void WaitForPendingLoads();
@@ -457,12 +460,20 @@ class ResourceManager {
     std::shared_ptr<IResource> GetCachedResource(std::variant<ResourceLoadError, std::shared_ptr<IResource>> cacheLine);
 
   private:
+    void DrainResourceCache();
+
     std::unordered_map<ResourceIdentifier, std::variant<ResourceLoadError, std::shared_ptr<IResource>>,
                        ResourceIdentifierHash, ResourceIdentifierEqual>
         mResourceCache;
     std::shared_ptr<ResourceLoader> mResourceLoader;
     std::shared_ptr<ArchiveManager> mArchiveManager;
     std::shared_ptr<BS::thread_pool> mThreadPool;
+
+    // Serializes task submission and synchronous cache insertion against shutdown.
+    std::mutex mTaskSubmissionMutex;
+    bool mAcceptingTasks = true;
+
+    // Protects mResourceCache.
     std::mutex mMutex;
     std::atomic<bool> mAltAssetsEnabled{false};
     // Private information for which owner and archive are default.
