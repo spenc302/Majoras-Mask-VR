@@ -52,7 +52,11 @@ public final class SetupActivity extends Activity {
     }
    }
    new File(root(),"mods").mkdirs();new File(root(),"saves").mkdirs();
-   try{SharedStorage.sync(this);}catch(Exception storage){android.util.Log.w("MMVR-Storage","Shared packs could not refresh; keeping last cached set",storage);}
+   try{
+       android.util.Log.i("MMVR-Storage", "SetupActivity: starting SharedStorage.sync()");
+       SharedStorage.sync(this);
+       android.util.Log.i("MMVR-Storage", "SetupActivity: SharedStorage.sync() completed: " + SharedStorage.syncStatus());
+   }catch(Exception storage){android.util.Log.w("MMVR-Storage","Shared packs could not refresh; keeping last cached set",storage);}
    if(new File(root(),"mm.o2r").isFile()){ArchivePolicy.verify(new File(root(),"mm.o2r"),new File(root(),"2ship.o2r"));runOnUiThread(()->{startActivity(gameIntent());finish();});return;}
    busy=false;display("Choose your own uncompressed Majora's Mask ROM (.z64, .v64 or .n64). Browse Downloads or another folder. Extraction happens here on your headset. US 1.0 and US GameCube are supported.");
   }catch(Exception e){busy=false;display("Setup failed: "+e.getMessage());}},"MMVR-setup").start();}

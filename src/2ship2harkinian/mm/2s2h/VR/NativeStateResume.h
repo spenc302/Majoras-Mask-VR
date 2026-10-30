@@ -100,6 +100,7 @@ inline void PollPendingStateResume() {
     }
     if(!pending)return;
     const int slot=pending->sourceSlot;
+    SPDLOG_INFO("[MMVR-Lifecycle] Pending save-state restore found for slot: {}", slot);
     std::string status;
     bool committed=false;
     try {

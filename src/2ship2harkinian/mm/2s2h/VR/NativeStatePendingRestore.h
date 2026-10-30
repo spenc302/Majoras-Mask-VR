@@ -119,6 +119,7 @@ inline void RestorePreferences(const nlohmann::json& previous,const nlohmann::js
     RefreshRestoredSettings(changed);
     SavePreferences();
     MMVR_RefreshModCatalog();
+    SPDLOG_INFO("[MMVR-Lifecycle] RestorePreferences completed successfully");
 }
 inline void CheckContract(const mmvr::states::Snapshot& snapshot) {
     const auto& contract=CurrentNativeStateContract();
