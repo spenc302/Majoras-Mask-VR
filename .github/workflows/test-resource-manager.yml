@@ -1,0 +1,83 @@
+
+name: ResourceManager Build and Tests
+
+on:
+  push:
+    branches:
+      - quest-restart-feature
+  pull_request:
+    branches:
+      - quest-restart-feature
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: resource-manager-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test-libultraship:
+    name: Build libultraship and run tests
+    runs-on: ubuntu-22.04
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install system dependencies
+        working-directory: src/2ship2harkinian/libultraship
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y $(cat .github/workflows/apt-deps.txt) build-essential cmake ninja-build python3 python3-pip wget
+
+      - name: Install SDL 2.24.1
+        run: |
+          wget -q https://www.libsdl.org/release/SDL2-2.24.1.tar.gz
+          tar -xzf SDL2-2.24.1.tar.gz
+          cd SDL2-2.24.1
+          ./configure
+          make -j"$(nproc)"
+          sudo make install
+          sudo ldconfig
+
+      - name: Install tinyxml2 10.0.0
+        run: |
+          wget -q https://github.com/leethomason/tinyxml2/archive/refs/tags/10.0.0.tar.gz
+          tar -xzf 10.0.0.tar.gz
+          cmake -S tinyxml2-10.0.0 -B tinyxml2-10.0.0/build -DCMAKE_BUILD_TYPE=Release
+          cmake --build tinyxml2-10.0.0/build --parallel "$(nproc)"
+          sudo cmake --install tinyxml2-10.0.0/build
+          sudo ldconfig
+
+      - name: Install Python dependencies
+        working-directory: src/2ship2harkinian/libultraship
+        run: |
+          python3 -m pip install -r requirements.txt --break-system-packages || python3 -m pip install -r requirements.txt
+
+      - name: Configure libultraship with tests enabled
+        working-directory: src/2ship2harkinian/libultraship
+        env:
+          CC: gcc-12
+          CXX: g++-12
+        run: |
+          cmake -S . -B build-ci -G Ninja \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DLUS_BUILD_TESTS=ON
+
+      - name: Build libultraship and test executable
+        working-directory: src/2ship2harkinian/libultraship
+        run: |
+          cmake --build build-ci --parallel "$(nproc)"
+
+      - name: Run libultraship tests
+        working-directory: src/2ship2harkinian/libultraship
+        env:
+          SDL_VIDEODRIVER: dummy
+          SDL_AUDIODRIVER: dummy
+        run: |
+          ctest --test-dir build-ci --output-on-failure
