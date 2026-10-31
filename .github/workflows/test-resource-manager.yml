@@ -1,5 +1,5 @@
 
-name: ResourceManager Build and Tests
+name: ResourceManager Build and Lifecycle Tests
 
 on:
   push:
@@ -18,8 +18,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build-and-test-libultraship:
-    name: Build libultraship and run tests
+  build-and-test:
+    name: Build libultraship and test ResourceManager lifecycle
     runs-on: ubuntu-22.04
     timeout-minutes: 60
 
@@ -33,7 +33,9 @@ jobs:
         working-directory: src/2ship2harkinian/libultraship
         run: |
           sudo apt-get update
-          sudo apt-get install -y $(cat .github/workflows/apt-deps.txt) build-essential cmake ninja-build python3 python3-pip wget
+          sudo apt-get install -y $(cat .github/workflows/apt-deps.txt) \
+            build-essential cmake ninja-build python3 python3-pip wget \
+            gcc-12 g++-12
 
       - name: Install SDL 2.24.1
         run: |
@@ -49,7 +51,8 @@ jobs:
         run: |
           wget -q https://github.com/leethomason/tinyxml2/archive/refs/tags/10.0.0.tar.gz
           tar -xzf 10.0.0.tar.gz
-          cmake -S tinyxml2-10.0.0 -B tinyxml2-10.0.0/build -DCMAKE_BUILD_TYPE=Release
+          cmake -S tinyxml2-10.0.0 -B tinyxml2-10.0.0/build \
+            -DCMAKE_BUILD_TYPE=Release
           cmake --build tinyxml2-10.0.0/build --parallel "$(nproc)"
           sudo cmake --install tinyxml2-10.0.0/build
           sudo ldconfig
@@ -57,7 +60,130 @@ jobs:
       - name: Install Python dependencies
         working-directory: src/2ship2harkinian/libultraship
         run: |
-          python3 -m pip install -r requirements.txt --break-system-packages || python3 -m pip install -r requirements.txt
+          python3 -m pip install -r requirements.txt --break-system-packages \
+            || python3 -m pip install -r requirements.txt
+
+      - name: Generate ResourceManager lifecycle regression tests
+        working-directory: src/2ship2harkinian/libultraship
+        run: |
+          cat > tests/resource_manager_ci_tests.cpp <<'EOF'
+          #include <gtest/gtest.h>
+          #include <ship/resource/ResourceManager.h>
+          #include <ship/resource/Resource.h>
+
+          #include <atomic>
+          #include <functional>
+          #include <memory>
+
+          namespace {
+
+          class LifecycleProbeResource final : public Ship::IResource {
+          public:
+              explicit LifecycleProbeResource(std::function<void()> onDestroy = {})
+                  : Ship::IResource(nullptr), mOnDestroy(std::move(onDestroy)) {}
+
+              ~LifecycleProbeResource() override {
+                  if (mOnDestroy) {
+                      mOnDestroy();
+                  }
+              }
+
+              void* GetRawPointer() override {
+                  return &mPayload;
+              }
+
+              size_t GetPointerSize() override {
+                  return sizeof(mPayload);
+              }
+
+          private:
+              int mPayload = 42;
+              std::function<void()> mOnDestroy;
+          };
+
+          } // namespace
+
+          TEST(ResourceManagerLifecycle, CachedResourceIsDestroyedWithManager) {
+              std::atomic<bool> destroyed{false};
+
+              {
+                  Ship::ResourceManager manager;
+
+                  auto resource = std::make_shared<LifecycleProbeResource>(
+                      [&destroyed]() {
+                          destroyed.store(true);
+                      });
+
+                  manager.CacheExternalResource("ci/lifecycle-probe", resource);
+                  resource.reset();
+
+                  ASSERT_NE(
+                      manager.GetCachedResource("ci/lifecycle-probe"),
+                      nullptr
+                  );
+
+                  EXPECT_FALSE(destroyed.load());
+              }
+
+              EXPECT_TRUE(destroyed.load())
+                  << "ResourceManager destruction did not release its cached resource";
+          }
+
+          TEST(ResourceManagerLifecycle, RejectsExternalCacheInsertionAfterShutdown) {
+              Ship::ResourceManager manager;
+
+              auto accepted = std::make_shared<LifecycleProbeResource>();
+              manager.CacheExternalResource("ci/accepted", accepted);
+
+              ASSERT_NE(manager.GetCachedResource("ci/accepted"), nullptr);
+
+              manager.StopAcceptingTasks();
+
+              auto rejected = std::make_shared<LifecycleProbeResource>();
+              manager.CacheExternalResource("ci/rejected", rejected);
+
+              EXPECT_EQ(manager.GetCachedResource("ci/rejected"), nullptr)
+                  << "CacheExternalResource accepted an insertion after shutdown began";
+
+              EXPECT_NE(manager.GetCachedResource("ci/accepted"), nullptr)
+                  << "An existing cache entry was unexpectedly removed";
+          }
+
+          TEST(ResourceManagerLifecycle, CacheResourceDestructorCanReenterManager) {
+              Ship::ResourceManager manager;
+
+              std::atomic<bool> destructorRan{false};
+              std::atomic<bool> reentryCompleted{false};
+
+              auto resource = std::make_shared<LifecycleProbeResource>(
+                  [&]() {
+                      destructorRan.store(true);
+
+                      // This would deadlock if cache draining destroyed the
+                      // resource while holding the cache mutex.
+                      manager.SnapshotCachedResources();
+
+                      reentryCompleted.store(true);
+                  });
+
+              manager.CacheExternalResource("ci/reentrant-destructor", resource);
+              resource.reset();
+
+              EXPECT_FALSE(destructorRan.load());
+
+              // The ResourceManager destructor drains the cache.
+              // The test process timeout catches a cache-mutex deadlock.
+              // The assertions below are performed by the next test phase
+              // through the shared flags after manager destruction.
+              manager.UnloadResource("ci/reentrant-destructor");
+
+              EXPECT_TRUE(destructorRan.load());
+              EXPECT_TRUE(reentryCompleted.load());
+          }
+          EOF
+
+          echo 'target_sources(lus_tests PRIVATE resource_manager_ci_tests.cpp)' \
+            >> tests/CMakeLists.txt
 
       - name: Configure libultraship with tests enabled
         working-directory: src/2ship2harkinian/libultraship
@@ -69,15 +195,15 @@ jobs:
             -DCMAKE_BUILD_TYPE=Debug \
             -DLUS_BUILD_TESTS=ON
 
-      - name: Build libultraship and test executable
+      - name: Build libultraship and lifecycle tests
         working-directory: src/2ship2harkinian/libultraship
         run: |
           cmake --build build-ci --parallel "$(nproc)"
 
-      - name: Run libultraship tests
+      - name: Run all libultraship tests
         working-directory: src/2ship2harkinian/libultraship
         env:
           SDL_VIDEODRIVER: dummy
           SDL_AUDIODRIVER: dummy
         run: |
-          ctest --test-dir build-ci --output-on-failure
+          ctest --test-dir build-ci --output-on-failure --timeout 120
