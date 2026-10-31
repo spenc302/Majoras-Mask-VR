@@ -1,3 +1,4 @@
+
 #pragma once
 
 #ifdef __cplusplus
@@ -230,7 +231,15 @@ class Gui {
     void HandleMouseCapture();
 
     ImVec2 mTemporaryWindowPos; ///< Scratchpad position used when repositioning windows.
-    ImGuiIO* mImGuiIo;          ///< Pointer to the active ImGuiIO context.
+    ImGuiIO* mImGuiIo = nullptr; ///< Pointer to the active ImGuiIO context.
+
+    // Explicit ImGui lifecycle state.
+    // These allow shutdown to happen before the graphics context is destroyed
+    // and make the later Window base-destructor shutdown call safe.
+    ImGuiContext* mImGuiContext = nullptr;
+    bool mImGuiPlatformInitialized = false;
+    bool mImGuiRendererInitialized = false;
+
     std::map<std::string, std::shared_ptr<GuiWindow>> mGuiWindows; ///< Registered window map (name → window).
 
   private:
