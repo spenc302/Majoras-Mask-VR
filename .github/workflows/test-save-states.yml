@@ -1,6 +1,7 @@
 name: Test Save State Archive
 
 on:
+  workflow_call:
   push:
     branches: [quest-restart-feature]
   pull_request:

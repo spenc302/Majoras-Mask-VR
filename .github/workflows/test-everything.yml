@@ -1,0 +1,125 @@
+name: Ultimate Non-Device Test Suite
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ultimate-non-device-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  libultraship:
+    name: libultraship unit and lifecycle tests
+    uses: ./.github/workflows/test-resource-manager.yml
+    permissions:
+      contents: read
+
+  save-states:
+    name: Save-state archive tests
+    uses: ./.github/workflows/test-save-states.yml
+    permissions:
+      contents: read
+
+  quest-apk:
+    name: Full Quest Android build
+    uses: ./.github/workflows/build-quest-apk.yml
+    permissions:
+      contents: read
+
+  portable-runtime:
+    name: Portable runtime and native-literal tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build g++ libopenxr-dev
+
+      - name: Configure portable runtime checks
+        run: |
+          cmake -S src/mmvr-runtime -B build/runtime-tests -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DMMVR_CORE_ONLY=ON
+
+      - name: Build and run portable runtime checks
+        run: |
+          cmake --build build/runtime-tests --parallel 2
+          ctest --test-dir build/runtime-tests --output-on-failure
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Compile and run Quest updater policy checks
+        run: |
+          mkdir -p build/quest-update-policy
+          javac -d build/quest-update-policy \
+            platform/android/app/src/main/java/com/fulldivegames/majorasmaskvr/UpdatePolicy.java \
+            tests/QuestUpdatePolicyTest.java
+          java -cp build/quest-update-policy QuestUpdatePolicyTest
+
+  windows-updater:
+    name: Windows updater integration tests
+    runs-on: windows-2022
+    timeout-minutes: 20
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Test updater install, validation, and rollback paths
+        shell: pwsh
+        run: python tests/test_updater.py
+
+  summary:
+    name: Overall non-device test result
+    if: always()
+    needs:
+      - libultraship
+      - save-states
+      - quest-apk
+      - portable-runtime
+      - windows-updater
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Summarize component results
+        env:
+          LIBULTRASHIP: ${{ needs.libultraship.result }}
+          SAVE_STATES: ${{ needs.save-states.result }}
+          QUEST_APK: ${{ needs.quest-apk.result }}
+          PORTABLE_RUNTIME: ${{ needs.portable-runtime.result }}
+          WINDOWS_UPDATER: ${{ needs.windows-updater.result }}
+        run: |
+          {
+            echo "## Non-device validation"
+            echo
+            echo "| Suite | Result |"
+            echo "|---|---|"
+            echo "| libultraship unit and lifecycle tests | $LIBULTRASHIP |"
+            echo "| Save-state archive tests | $SAVE_STATES |"
+            echo "| Full Quest APK build | $QUEST_APK |"
+            echo "| Portable runtime and updater-policy tests | $PORTABLE_RUNTIME |"
+            echo "| Windows updater integration tests | $WINDOWS_UPDATER |"
+            echo
+            echo "A successful APK build does not replace Quest headset/runtime testing."
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [[ "$LIBULTRASHIP" != success || "$SAVE_STATES" != success ||
+                "$QUEST_APK" != success || "$PORTABLE_RUNTIME" != success ||
+                "$WINDOWS_UPDATER" != success ]]; then
+            exit 1
+          fi

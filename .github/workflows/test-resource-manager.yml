@@ -1,6 +1,7 @@
 name: ResourceManager Build and Lifecycle Tests
 
 on:
+  workflow_call:
   push:
     branches:
       - quest-restart-feature

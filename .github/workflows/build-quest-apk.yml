@@ -1,6 +1,7 @@
 name: Build Majora's Mask VR Quest APK
 
 on:
+  workflow_call:
   push:
     branches:
       - develop
