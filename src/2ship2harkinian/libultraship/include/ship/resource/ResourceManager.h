@@ -9,6 +9,7 @@
 #include <mutex>
 #include <queue>
 #include <variant>
+#include <cstddef>
 #include "ship/resource/Resource.h"
 #include "ship/resource/ResourceLoader.h"
 #include "ship/resource/archive/Archive.h"
@@ -18,6 +19,7 @@
 #define BS_THREAD_POOL_ENABLE_PAUSE
 #include <BS_thread_pool.hpp>
 #include <atomic>
+#include <cstdint>
 
 namespace Ship {
 struct File;
@@ -366,12 +368,22 @@ class ResourceManager {
      * @return true if alternate assets are active.
      */
     bool IsAltAssetsEnabled();
+    /**
+     * @brief Returns the number of alternate asset resources loaded from archives.
+     * @return Count of successfully loaded alternate asset resources.
+     */
+    size_t GetAltAssetOverrideLoadCount();
 
     /**
      * @brief Enables or disables alt-asset (mod) loading.
      * @param isEnabled true to enable, false to disable.
+     * Changing the setting invalidates cached alternate-asset misses.
      */
     void SetAltAssetsEnabled(bool isEnabled);
+    /**
+     * @brief Clears cached alternate-asset misses after mounting additional archives.
+     */
+    void InvalidateAltAssetMisses();
 
     /**
      * @brief Loads raw file bytes from the archive, bypassing resource deserialization.
@@ -461,6 +473,7 @@ class ResourceManager {
 
   private:
     void DrainResourceCache();
+    std::shared_ptr<IResource> GetCachedResourceForLoad(ResourceIdentifierLookup lookup, bool loadExact);
 
     std::unordered_map<ResourceIdentifier, std::variant<ResourceLoadError, std::shared_ptr<IResource>>,
                        ResourceIdentifierHash, ResourceIdentifierEqual>
@@ -476,6 +489,8 @@ class ResourceManager {
     // Protects mResourceCache.
     std::mutex mMutex;
     std::atomic<bool> mAltAssetsEnabled{false};
+    std::atomic<uint64_t> mAltAssetArchiveRevision{0};
+    std::atomic<size_t> mAltAssetOverrideLoadCount{0};
     // Private information for which owner and archive are default.
     uintptr_t mDefaultCacheOwner = 0;
     std::shared_ptr<Archive> mDefaultCacheArchive = nullptr;

@@ -188,6 +188,7 @@ void UpdateModFiles(bool init = false, bool reset = false) {
                         changed = true;
                     }
                 }
+                Ship::Context::GetRawInstance()->GetResourceManager()->InvalidateAltAssetMisses();
             }
         }
         if (changed) {

@@ -183,8 +183,17 @@ void LoadVRPacks() {
         try {
             auto archive = GetArchiveManager()->AddArchive(pack.path);
             if (archive) {
-                mmvr::mountedModPacks.push_back(pack);
-                SPDLOG_INFO("[MMVR-TextureDiagnostics] Successfully mounted pack: '{}' (path: '{}')", pack.name, pack.path);
+                const auto files = archive->ListFiles();
+                const size_t alternateAssetCount = files
+                    ? static_cast<size_t>(std::count_if(files->begin(), files->end(), [](const auto& file) {
+                          return file.second.starts_with("alt/");
+                      }))
+                    : 0;
+                auto mountedPack = pack;
+                mountedPack.alternateAssetFiles = alternateAssetCount;
+                mmvr::mountedModPacks.push_back(std::move(mountedPack));
+                SPDLOG_INFO("[MMVR-TextureDiagnostics] Successfully mounted pack: '{}' (path: '{}', alt/ files: {})",
+                            pack.name, pack.path, alternateAssetCount);
             }
             else { ++failed; SPDLOG_WARN("[MMVR-TextureDiagnostics] Mod pack could not load: {}", pack.name); }
         } catch (const std::exception& e) {
@@ -193,6 +202,7 @@ void LoadVRPacks() {
     }
     SPDLOG_INFO("[MMVR-TextureDiagnostics] VFS archive mounting complete. Mounted: {}, Failed: {}, VFS total archives: {}",
                 mmvr::mountedModPacks.size(), failed, GetArchiveManager()->GetArchives() ? GetArchiveManager()->GetArchives()->size() : 0);
+    Ship::Context::GetRawInstance()->GetResourceManager()->InvalidateAltAssetMisses();
     if (failed) mmvr::updateStatus = std::to_string(failed) + " selected packs failed to load; check compatible format and log.";
     // Alt textures in packs are not selected by the port unless this switch is on.
     if (!CVarGet("gVR.ModAssetsDefaultApplied")) {

@@ -186,7 +186,11 @@ static void ExportDiagnostics() {
             // Stable opaque IDs distinguish configurations without leaking folder names.
             uint64_t id=14695981039346656037ull;
             for(unsigned char c:pack.id) {id^=c;id*=1099511628211ull;}
-            report["mods"].push_back({{"opaqueId",std::to_string(id)},{"enabled",pack.enabled}});
+            const auto mounted = std::find_if(mmvr::mountedModPacks.begin(),mmvr::mountedModPacks.end(),
+                [&](const auto& value) { return value.id == pack.id; });
+            report["mods"].push_back({{"opaqueId",std::to_string(id)},{"enabled",pack.enabled},
+                {"mounted",mounted!=mmvr::mountedModPacks.end()},
+                {"alternateAssetFiles",mounted==mmvr::mountedModPacks.end()?0:mounted->alternateAssetFiles}});
         }
         for(const char* name:{"mmvr.log","logs/2 Ship 2 Harkinian.log"}) {
             std::ifstream log(name,std::ios::binary|std::ios::ate);
@@ -204,6 +208,9 @@ static void ExportDiagnostics() {
             report["recentLogSignals"][name]={{"errors",errors},{"warnings",warnings},{"crashOrFatal",crashes}};
         }
         report["enabledModCount"] = std::count_if(mmvr::modPacks.begin(),mmvr::modPacks.end(),[](const auto& p){return p.enabled;});
+        const auto resourceManager = Ship::Context::GetRawInstance()->GetResourceManager();
+        report["alternateAssetsEnabled"] = resourceManager->IsAltAssetsEnabled();
+        report["alternateAssetsLoaded"] = resourceManager->GetAltAssetOverrideLoadCount();
         std::ifstream version("version.json");
         if(version) {
             auto value=nlohmann::json::parse(version);

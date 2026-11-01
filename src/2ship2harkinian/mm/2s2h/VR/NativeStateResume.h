@@ -28,6 +28,19 @@ inline void Status(const std::string& text) {
     menu.CollapseAll();menu.expanded[35]=true;
     std::ofstream("mmvr-save-states.log",std::ios::app)<<text<<"\n";
 }
+inline void CompleteNativeStateRestoreHooks() noexcept {
+    const auto reportFailure=[](const char* hook) noexcept {
+        std::ofstream("mmvr-save-states.log",std::ios::app)<<"Post-commit hook failed: "<<hook<<"\n";
+    };
+    try { mmvrgame::ClearHolster(); }
+    catch(...) { reportFailure("ClearHolster"); }
+    try { mmvrgame::ResetHandGeometry(); }
+    catch(...) { reportFailure("ResetHandGeometry"); }
+    try { MMVR_CameraSaveLoaded(); }
+    catch(...) { reportFailure("MMVR_CameraSaveLoaded"); }
+    try { MMVR_ScheduleFormReset(); }
+    catch(...) { reportFailure("MMVR_ScheduleFormReset"); }
+}
 inline void FixtureResult(bool success,const std::string& status,int slot) {
 #ifdef MMVR_LOCAL_TEST_TOOLS
     if(std::getenv("MMVR_NATIVE_STATE_PENDING_SLOT")) {
@@ -134,15 +147,6 @@ inline void PollPendingStateResume() {
         LoadExactNativeState(1,pending->directory);
         committed=true;
         bootstrap=false;
-        // Each post-commit hook is isolated: failure in one must not prevent
-        // the remaining hooks or make the committed native restore appear to fail.
-        try { mmvrgame::ClearHolster(); }
-        catch(...) { std::ofstream("mmvr-save-states.log",std::ios::app)<<"Post-commit hook failed: ClearHolster\n"; }
-        try { mmvrgame::ResetHandGeometry(); }
-        catch(...) { std::ofstream("mmvr-save-states.log",std::ios::app)<<"Post-commit hook failed: ResetHandGeometry\n"; }
-        try { MMVR_CameraSaveLoaded(); }
-        catch(...) { std::ofstream("mmvr-save-states.log",std::ios::app)<<"Post-commit hook failed: MMVR_CameraSaveLoaded\n"; }
-        MMVR_ScheduleFormReset();
         status="Loaded state slot "+std::to_string(slot)+" with its saved settings and packs.";
         try {CVarSave();if(!Ship::Context::GetRawInstance()->GetConfig()->LastSaveSucceeded())
             status+=" Settings are active, but could not be saved to disk.";}

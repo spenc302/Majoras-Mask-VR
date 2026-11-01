@@ -1,10 +1,15 @@
 #pragma once
 #include <algorithm>
+#include <cstddef>
 #include <set>
 #include <string>
 #include <vector>
 namespace mmvr {
-struct ModPack { std::string id, name, path; bool enabled = true; };
+struct ModPack {
+    std::string id, name, path;
+    bool enabled = true;
+    std::size_t alternateAssetFiles = 0;
+};
 inline std::vector<ModPack> modPacks;
 // This is the successfully mounted startup set, in actual archive priority order.
 // Refresh/toggles only change modPacks; live resources still belong to this set.

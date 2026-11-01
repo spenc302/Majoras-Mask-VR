@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+#include <cstring>
 #include <functional>
 #include <memory>
 #include <string>
@@ -11,6 +12,7 @@
 #include "ship/resource/ResourceManager.h"
 #include "ship/resource/archive/Archive.h"
 #include "ship/resource/archive/ArchiveManager.h"
+#include "ship/resource/factory/BlobFactory.h"
 #include "ship/resource/type/Blob.h"
 #include "ship/utils/StrHash64.h"
 
@@ -567,6 +569,77 @@ TEST(ResourceManager, SetAltAssetsEnabledToggles) {
 
     rm.SetAltAssetsEnabled(false);
     EXPECT_FALSE(rm.IsAltAssetsEnabled());
+}
+
+TEST(ResourceManager, CachedBaseDoesNotBypassAlternateLookup) {
+    Ship::ResourceManager rm;
+    rm.Init({}, {});
+
+    auto base = std::make_shared<Ship::Blob>();
+    rm.CacheExternalResource("textures/item", base);
+    rm.SetAltAssetsEnabled(true);
+
+    EXPECT_EQ(rm.GetCachedResource("textures/item"), base);
+    EXPECT_EQ(rm.GetCachedResource("textures/item", true), base);
+    rm.StopAcceptingTasks();
+    EXPECT_EQ(rm.LoadResource("textures/item"), nullptr);
+}
+
+TEST(ResourceManager, CachedAlternateIsSelectedBeforeCachedBase) {
+    Ship::ResourceManager rm;
+    rm.Init({}, {});
+    auto base = std::make_shared<Ship::Blob>();
+    auto replacement = std::make_shared<Ship::Blob>();
+    rm.CacheExternalResource("textures/item", base);
+    rm.CacheExternalResource("alt/textures/item", replacement);
+    rm.SetAltAssetsEnabled(true);
+    EXPECT_EQ(rm.LoadResourceAsync("textures/item").get(), replacement);
+}
+
+TEST(ResourceManager, CountsSuccessfullyLoadedAlternateAssets) {
+    Ship::ResourceManager rm;
+    rm.Init({}, {});
+    uint32_t payloadSize = 3;
+    std::string bytes(sizeof(payloadSize) + payloadSize, '\0');
+    std::memcpy(bytes.data(), &payloadSize, sizeof(payloadSize));
+    bytes[sizeof(payloadSize)] = 1;
+    bytes[sizeof(payloadSize) + 1] = 2;
+    bytes[sizeof(payloadSize) + 2] = 3;
+    auto archive = LoadedArchive("ram://alt-assets", {{"alt/textures/item", bytes}});
+    rm.GetArchiveManager()->AddArchive(archive);
+    ASSERT_TRUE(rm.GetResourceLoader()->RegisterResourceFactory(
+        std::make_shared<Ship::ResourceFactoryBinaryBlobV0>(), RESOURCE_FORMAT_BINARY, "Blob",
+        static_cast<uint32_t>(Ship::ResourceType::Blob), 0));
+
+    auto initData = std::make_shared<Ship::ResourceInitData>();
+    initData->Path = "alt/textures/item";
+    initData->ByteOrder = Endianness::Native;
+    initData->Type = static_cast<uint32_t>(Ship::ResourceType::Blob);
+    initData->ResourceVersion = 0;
+    initData->Id = 1;
+    initData->IsCustom = false;
+    initData->Format = RESOURCE_FORMAT_BINARY;
+
+    EXPECT_EQ(rm.GetAltAssetOverrideLoadCount(), 0u);
+    ASSERT_NE(rm.LoadResourceProcess(Ship::ResourceIdentifier("alt/textures/item", 0, archive), false, initData),
+              nullptr);
+    EXPECT_EQ(rm.GetAltAssetOverrideLoadCount(), 1u);
+}
+
+TEST(ResourceManager, InvalidatingAlternateMissesAllowsReplacementLookup) {
+    Ship::ResourceManager rm;
+    rm.Init({}, {});
+    auto base = std::make_shared<Ship::Blob>();
+    rm.CacheExternalResource("textures/item", base);
+    rm.SetAltAssetsEnabled(true);
+
+    EXPECT_EQ(rm.LoadResourceProcess("alt/textures/item"), nullptr);
+    EXPECT_EQ(rm.GetCachedResource("textures/item"), base);
+    EXPECT_EQ(rm.LoadResource("textures/item"), base);
+
+    rm.StopAcceptingTasks();
+    rm.InvalidateAltAssetMisses();
+    EXPECT_EQ(rm.LoadResource("textures/item"), nullptr);
 }
 
 // ============================================================

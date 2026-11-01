@@ -904,6 +904,7 @@ void LoadExactNativeState(int slot,const std::filesystem::path& directory) {
     preparedRando.Commit();preparedSettings.Commit();
     MMVR_ResetRandoDrawCaches();
     FrameInterpolation_ResetHistory();BeginStateTrackingResume();
+    state_resume::CompleteNativeStateRestoreHooks();
 }
 }
 namespace mmvrgame {

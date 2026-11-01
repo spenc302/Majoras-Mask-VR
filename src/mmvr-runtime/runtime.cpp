@@ -1409,7 +1409,7 @@ class TheaterRuntime {
 
     uint32_t width = 0, height = 0;
     uint32_t maxWidth = 0, maxHeight = 0;
-    bool running = false, inFrame = false, acquired = false, imageWaited = false;
+    bool running = false, sessionEnded = false, inFrame = false, acquired = false, imageWaited = false;
     bool preparedFramePending = false;
     XrFrameState preparedFrame{ XR_TYPE_FRAME_STATE };
     RenderFrameTiming preparedTiming{};
@@ -1557,6 +1557,7 @@ class TheaterRuntime {
                     XrSessionBeginInfo begin{ XR_TYPE_SESSION_BEGIN_INFO };
                     begin.primaryViewConfigurationType = XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
                     Check(xrBeginSession(session, &begin), "Begin session");
+                    sessionEnded = false;
                     running = true;
                     centerPending = true;
                     firstFocusCenterPending = true;
@@ -1584,6 +1585,7 @@ class TheaterRuntime {
                 } else if (change.state == XR_SESSION_STATE_STOPPING) {
                     CancelPreparedFrame();
                     Check(xrEndSession(session), "End session");
+                    sessionEnded = true;
                     running = false;
                     refresh = 0;
                     cadence.Reset();
@@ -1815,45 +1817,82 @@ class TheaterRuntime {
         return !inputRelease && (SelectorGrip() < .25f || holsterGripClaimed);
     }
     ~TheaterRuntime() {
-        Log(std::string("=== MMVR runtime shutdown (session running at teardown: ") + (session != XR_NULL_HANDLE ? "yes" : "no") + ")");
-        if (restartInProgress && session != XR_NULL_HANDLE) {
-            Log("Requesting OpenXR session exit for restart...");
-            xrRequestExitSession(session);
-            auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
-            while (std::chrono::steady_clock::now() < deadline) {
-                XrEventDataBuffer event{ XR_TYPE_EVENT_DATA_BUFFER };
-                if (xrPollEvent(instance, &event) == XR_SUCCESS) {
-                    if (event.type == XR_TYPE_EVENT_DATA_SESSION_STATE_CHANGED) {
-                        auto& change = *reinterpret_cast<XrEventDataSessionStateChanged*>(&event);
-                        if (change.state == XR_SESSION_STATE_STOPPING) {
-                            Log("Received XR_SESSION_STATE_STOPPING during teardown; ending session");
-                            xrEndSession(session);
-                            break;
-                        }
-                    }
-                } else {
-                    std::this_thread::sleep_for(std::chrono::milliseconds(10));
-                }
-            }
-        }
+        Log(std::string("=== MMVR runtime shutdown (session running at teardown: ") + (running ? "yes" : "no") + ")");
         menu.Close();
         selector.Cancel();
-        // Error paths may have an acquired image or begun frame. Balance them before teardown.
+        // Balance frame-owned work before requesting session exit.
         if (acquired) {
             if (!imageWaited) {
                 XrSwapchainImageWaitInfo wait{ XR_TYPE_SWAPCHAIN_IMAGE_WAIT_INFO };
                 wait.timeout = XR_INFINITE_DURATION;
-                imageWaited = XR_SUCCEEDED(xrWaitSwapchainImage(acquiredChain, &wait));
+                const XrResult waitResult = xrWaitSwapchainImage(acquiredChain, &wait);
+                imageWaited = XR_SUCCEEDED(waitResult);
+                if (!imageWaited) {
+                    Log("Failed to wait for acquired OpenXR image during teardown: " +
+                        std::to_string(static_cast<int>(waitResult)));
+                }
             }
             if (imageWaited) {
                 XrSwapchainImageReleaseInfo release{ XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO };
-                xrReleaseSwapchainImage(acquiredChain, &release);
+                const XrResult releaseResult = xrReleaseSwapchainImage(acquiredChain, &release);
+                if (XR_SUCCEEDED(releaseResult)) {
+                    acquired = false;
+                } else {
+                    Log("Failed to release acquired OpenXR image during teardown: " +
+                        std::to_string(static_cast<int>(releaseResult)));
+                }
             }
         }
         if (inFrame) {
             try {
                 End(false);
-            } catch (...) {}
+            } catch (const std::exception& e) {
+                Log(std::string("Failed to end outstanding OpenXR frame during teardown: ") + e.what());
+            }
+        }
+        if (restartInProgress && session != XR_NULL_HANDLE && running && !sessionEnded) {
+            Log("Requesting OpenXR session exit for restart...");
+            const XrResult requestResult = xrRequestExitSession(session);
+            if (XR_FAILED(requestResult)) {
+                Log("Failed to request OpenXR session exit during teardown: " +
+                    std::to_string(static_cast<int>(requestResult)));
+            } else {
+                const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+                bool receivedStopping = false;
+                while (std::chrono::steady_clock::now() < deadline) {
+                    XrEventDataBuffer event{ XR_TYPE_EVENT_DATA_BUFFER };
+                    const XrResult pollResult = xrPollEvent(instance, &event);
+                    if (pollResult == XR_SUCCESS) {
+                        if (event.type == XR_TYPE_EVENT_DATA_SESSION_STATE_CHANGED) {
+                            const auto& change = *reinterpret_cast<XrEventDataSessionStateChanged*>(&event);
+                            sessionState = change.state;
+                            if (change.state == XR_SESSION_STATE_STOPPING) {
+                                receivedStopping = true;
+                                break;
+                            }
+                        }
+                    } else if (pollResult == XR_EVENT_UNAVAILABLE) {
+                        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                    } else {
+                        Log("Failed to poll OpenXR events during teardown: " +
+                            std::to_string(static_cast<int>(pollResult)));
+                        break;
+                    }
+                }
+                if (receivedStopping) {
+                    Log("Received XR_SESSION_STATE_STOPPING during teardown; ending session");
+                    const XrResult endResult = xrEndSession(session);
+                    if (XR_SUCCEEDED(endResult)) {
+                        sessionEnded = true;
+                        running = false;
+                    } else {
+                        Log("Failed to end OpenXR session during teardown: " +
+                            std::to_string(static_cast<int>(endResult)));
+                    }
+                } else {
+                    Log("Timed out waiting for XR_SESSION_STATE_STOPPING during teardown");
+                }
+            }
         }
         refresh = 0;
         inputFocused = false;

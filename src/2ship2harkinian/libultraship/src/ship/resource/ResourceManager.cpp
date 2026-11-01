@@ -186,6 +186,8 @@ std::shared_ptr<File> ResourceManager::LoadFileProcess(const ResourceIdentifier&
 
 std::shared_ptr<IResource> ResourceManager::LoadResourceProcess(const ResourceIdentifier& identifier, bool loadExact,
                                                                 std::shared_ptr<ResourceInitData> initData) {
+    const auto altArchiveRevision = mAltAssetArchiveRevision.load(std::memory_order_relaxed);
+
     // Check for and remove the OTR signature
     if (OtrSignatureCheck(identifier.Path.c_str())) {
         const auto newFilePath = identifier.Path.substr(7);
@@ -245,16 +247,26 @@ std::shared_ptr<IResource> ResourceManager::LoadResourceProcess(const ResourceId
         // Missing optional resources are also loaded by background workers.
         // Every cache mutation must use the same lock as readers and successful loads.
         const std::lock_guard<std::mutex> lock(mMutex);
+        if (isAltPath && mAltAssetsEnabled.load(std::memory_order_relaxed) &&
+            altArchiveRevision != mAltAssetArchiveRevision.load(std::memory_order_relaxed)) {
+            return nullptr;
+        }
         mResourceCache.try_emplace(identifier, ResourceLoadError::NotFound);
         return nullptr;
     }
 
     // Transform the raw data into a resource
     auto resource = GetResourceLoader()->LoadResource(identifier.Path, file, initData, mArchiveManager, identifier.Parent);
+    if (isAltPath && file != nullptr && resource == nullptr) {
+        const auto archive = identifier.Parent ? identifier.Parent : mArchiveManager->GetArchiveFromFile(identifier.Path);
+        SPDLOG_WARN("[MMVR-TextureDiagnostics] Alternate asset could not be decoded: '{}' from '{}'",
+                    identifier.Path, archive ? archive->GetPath() : "unknown archive");
+    }
 
     // Select the winner while holding the cache lock. A separate cache check
     // followed by insertion lets simultaneous loaders publish different objects.
     std::shared_ptr<IResource> winner;
+    bool loadedAlternateAsset = false;
     decltype(mResourceCache)::mapped_type retired;
     {
         const std::lock_guard<std::mutex> lock(mMutex);
@@ -264,7 +276,14 @@ std::shared_ptr<IResource> ResourceManager::LoadResourceProcess(const ResourceId
             retired.swap(entry->second);
             entry->second = resource ? decltype(mResourceCache)::mapped_type(resource)
                                      : decltype(mResourceCache)::mapped_type(ResourceLoadError::NotFound);
+            loadedAlternateAsset = isAltPath && resource != nullptr;
         }
+    }
+    if (loadedAlternateAsset) {
+        mAltAssetOverrideLoadCount.fetch_add(1, std::memory_order_relaxed);
+        const auto archive = identifier.Parent ? identifier.Parent : mArchiveManager->GetArchiveFromFile(identifier.Path);
+        SPDLOG_INFO("[MMVR-TextureDiagnostics] Alternate asset loaded: '{}' from '{}'", identifier.Path,
+                    archive ? archive->GetPath() : "unknown archive");
     }
     // Losing/replaced objects can run dependency-aware destructors. Never
     // release them while the cache lock is held.
@@ -286,8 +305,8 @@ std::shared_ptr<IResource> ResourceManager::LoadResourceProcess(const std::strin
     // Process() probes alternate archive files before a cached base resource.
     // Do not shortcut that ordering when a base path may have an uncached alt.
     if (loadExact || !mAltAssetsEnabled || path.starts_with(IResource::gAltAssetPrefix)) {
-        auto cached=GetCachedResource(CheckCache(ResourceIdentifierLookup{path,mDefaultCacheOwner,
-                                                                          mDefaultCacheArchive.get()},loadExact));
+        auto cached=GetCachedResourceForLoad(ResourceIdentifierLookup{path,mDefaultCacheOwner,
+                                                                       mDefaultCacheArchive.get()},loadExact);
         if (cached) return cached;
     }
     return LoadResourceProcess({ filePath, mDefaultCacheOwner, mDefaultCacheArchive }, loadExact, initData);
@@ -324,7 +343,8 @@ ResourceManager::LoadResourceAsync(const ResourceIdentifier& identifier, bool lo
     }
 
     // Check the cache before queueing the job.
-    auto cacheCheck = GetCachedResource(identifier, loadExact);
+    auto cacheCheck = GetCachedResourceForLoad(
+        ResourceIdentifierLookup{identifier.Path, identifier.Owner, identifier.Parent.get()}, loadExact);
     if (cacheCheck) {
         return MakeReadySharedFuture(std::move(cacheCheck));
     }
@@ -346,9 +366,10 @@ std::shared_ptr<IResource> ResourceManager::LoadResource(const ResourceIdentifie
                                                          std::shared_ptr<ResourceInitData> initData) {
     // Synchronous cache hits do not need an allocated promise/future. Use the
     // same signature, alt-asset and dirty-resource rules as LoadResourceAsync.
-    auto cached = OtrSignatureCheck(identifier.Path.c_str())
-        ? GetCachedResource({ identifier.Path.substr(7), identifier.Owner, identifier.Parent }, loadExact)
-        : GetCachedResource(identifier, loadExact);
+    std::string_view path = identifier.Path;
+    if (OtrSignatureCheck(identifier.Path.c_str())) path.remove_prefix(7);
+    auto cached = GetCachedResourceForLoad(ResourceIdentifierLookup{path, identifier.Owner, identifier.Parent.get()},
+                                           loadExact);
     if (cached != nullptr) {
         return cached;
     }
@@ -368,8 +389,8 @@ std::shared_ptr<IResource> ResourceManager::LoadResource(const std::string& file
                                                          std::shared_ptr<ResourceInitData> initData) {
     std::string_view path=filePath;
     if (OtrSignatureCheck(filePath.c_str())) path.remove_prefix(7);
-    auto cached=GetCachedResource(CheckCache(ResourceIdentifierLookup{path,mDefaultCacheOwner,
-                                                                      mDefaultCacheArchive.get()},loadExact));
+    auto cached=GetCachedResourceForLoad(ResourceIdentifierLookup{path,mDefaultCacheOwner,
+                                                                   mDefaultCacheArchive.get()},loadExact);
     if (cached) return cached;
     return LoadResource({ filePath, mDefaultCacheOwner, mDefaultCacheArchive }, loadExact, initData);
 }
@@ -389,7 +410,8 @@ std::variant<ResourceManager::ResourceLoadError, std::shared_ptr<IResource>>
 ResourceManager::CheckCache(const ResourceIdentifier& identifier, bool loadExact) {
     // Existing owned identifiers already carry their full hash. Keep their
     // lookup on that precomputed key; only string callers need a view key.
-    if (!loadExact && mAltAssetsEnabled && !identifier.Path.starts_with(IResource::gAltAssetPrefix)) {
+    if (!loadExact && mAltAssetsEnabled.load(std::memory_order_relaxed) &&
+        !identifier.Path.starts_with(IResource::gAltAssetPrefix)) {
         const auto altPath = IResource::gAltAssetPrefix + identifier.Path;
         auto altCacheResult = CheckCache(ResourceIdentifier{altPath, identifier.Owner, identifier.Parent}, loadExact);
         if (std::holds_alternative<std::shared_ptr<IResource>>(altCacheResult)) return altCacheResult;
@@ -402,13 +424,14 @@ ResourceManager::CheckCache(const ResourceIdentifier& identifier, bool loadExact
 
 std::variant<ResourceManager::ResourceLoadError, std::shared_ptr<IResource>>
 ResourceManager::CheckCache(ResourceIdentifierLookup lookup, bool loadExact) {
-    if (!loadExact && mAltAssetsEnabled && !lookup.Path.starts_with(IResource::gAltAssetPrefix)) {
+    if (!loadExact && mAltAssetsEnabled.load(std::memory_order_relaxed) &&
+        !lookup.Path.starts_with(IResource::gAltAssetPrefix)) {
         std::string altPath = IResource::gAltAssetPrefix;
         altPath.append(lookup.Path);
         auto altCacheResult = CheckCache(ResourceIdentifierLookup{altPath,lookup.Owner,lookup.Parent},loadExact);
 
-        // If the type held at this cache index is a resource, then we return it.
-        // Else we attempt to load standard definition assets.
+        // If the alternate cache entry is a resource, return it. Otherwise,
+        // keep the direct cache query useful to callers asking for a cached base.
         if (std::holds_alternative<std::shared_ptr<IResource>>(altCacheResult)) {
             return altCacheResult;
         }
@@ -437,6 +460,23 @@ std::shared_ptr<IResource> ResourceManager::GetCachedResource(const ResourceIden
 std::shared_ptr<IResource> ResourceManager::GetCachedResource(const std::string& filePath, bool loadExact) {
     // Gets the cached resource based on filePath.
     return GetCachedResource(CheckCache(filePath,loadExact));
+}
+
+std::shared_ptr<IResource> ResourceManager::GetCachedResourceForLoad(ResourceIdentifierLookup lookup, bool loadExact) {
+    if (!loadExact && mAltAssetsEnabled.load(std::memory_order_relaxed) &&
+        !lookup.Path.starts_with(IResource::gAltAssetPrefix)) {
+        std::string altPath = IResource::gAltAssetPrefix;
+        altPath.append(lookup.Path);
+        auto altCacheLine = CheckCache(ResourceIdentifierLookup{altPath, lookup.Owner, lookup.Parent}, true);
+        if (const auto* error = std::get_if<ResourceLoadError>(&altCacheLine)) {
+            if (*error == ResourceLoadError::NotFound) {
+                return GetCachedResource(CheckCache(lookup, true));
+            }
+            return nullptr;
+        }
+        return GetCachedResource(std::move(altCacheLine));
+    }
+    return GetCachedResource(CheckCache(lookup, loadExact));
 }
 
 std::shared_ptr<IResource>
@@ -631,11 +671,28 @@ bool ResourceManager::OtrSignatureCheck(const char* fileName) {
 }
 
 bool ResourceManager::IsAltAssetsEnabled() {
-    return mAltAssetsEnabled;
+    return mAltAssetsEnabled.load(std::memory_order_relaxed);
+}
+
+size_t ResourceManager::GetAltAssetOverrideLoadCount() {
+    return mAltAssetOverrideLoadCount.load(std::memory_order_relaxed);
 }
 
 void ResourceManager::SetAltAssetsEnabled(bool isEnabled) {
-    mAltAssetsEnabled = isEnabled;
+    const bool wasEnabled = mAltAssetsEnabled.exchange(isEnabled, std::memory_order_relaxed);
+    if (wasEnabled != isEnabled) {
+        InvalidateAltAssetMisses();
+    }
+}
+
+void ResourceManager::InvalidateAltAssetMisses() {
+    mAltAssetArchiveRevision.fetch_add(1, std::memory_order_relaxed);
+    const std::lock_guard<std::mutex> lock(mMutex);
+    std::erase_if(mResourceCache, [](const auto& entry) {
+        return entry.first.Path.starts_with(IResource::gAltAssetPrefix) &&
+               std::holds_alternative<ResourceLoadError>(entry.second) &&
+               std::get<ResourceLoadError>(entry.second) == ResourceLoadError::NotFound;
+    });
 }
 
 size_t ResourceManager::GetResourceSize(std::shared_ptr<IResource> resource) {
