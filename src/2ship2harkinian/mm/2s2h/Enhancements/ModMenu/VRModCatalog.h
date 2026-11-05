@@ -76,7 +76,7 @@ void RefreshVRPacks() {
         }
     }
 #ifdef __ANDROID__
-    const auto cache = std::filesystem::current_path() / "shared-pack-cache";
+    const auto cache = std::filesystem::path(Ship::Context::GetPathRelativeToAppDirectory("shared-pack-cache", appShortName));
     try {
         std::ifstream input(cache / "packs.json");
         if (input) {
